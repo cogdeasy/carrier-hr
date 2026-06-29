@@ -384,10 +384,13 @@ export async function cancelRequest(
   if (row.employeeId !== employeeId) throw Forbidden('You can only cancel your own requests');
 
   if (row.status === 'pending') {
-    await db
+    const cancelled = await db
       .update(timeOffRequests)
       .set({ status: 'cancelled', updatedAt: nowIso() })
       .where(and(eq(timeOffRequests.id, requestId), eq(timeOffRequests.status, 'pending')));
+    if (cancelled.rowsAffected === 0) {
+      throw BadRequest('Request status has changed and can no longer be cancelled');
+    }
   } else if (row.status === 'approved') {
     // Approved leave can only be withdrawn before it begins; once it has
     // started the time is considered taken. Cancelling refunds any used accrual.
