@@ -411,6 +411,7 @@ export async function assignCourse(
   if (unknown.length) throw BadRequest('Unknown employees', { employeeIds: unknown });
 
   const dueDate = input.dueDate ?? null;
+  const dueDateProvided = input.dueDate !== undefined;
   const existing = await db
     .select()
     .from(courseEnrollments)
@@ -428,7 +429,11 @@ export async function assignCourse(
     if (current) {
       await db
         .update(courseEnrollments)
-        .set({ required: true, dueDate, assignedById: assignerId })
+        .set({
+          required: true,
+          assignedById: assignerId,
+          ...(dueDateProvided ? { dueDate } : {}),
+        })
         .where(eq(courseEnrollments.id, current.id));
       affectedIds.push(current.id);
     } else {
