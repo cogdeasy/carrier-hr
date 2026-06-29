@@ -16,6 +16,8 @@ import type {
   JobRequisition,
   Notification,
   OnboardingTask,
+  OneOnOne,
+  OneOnOneActionItem,
   PayRun,
   Payslip,
   PayslipLine,
@@ -243,6 +245,7 @@ export function toGoal(row: InferSelectModel<typeof schema.goals>): Goal {
   return {
     id: row.id,
     employeeId: row.employeeId,
+    cycleId: row.cycleId,
     title: row.title,
     description: row.description,
     status: row.status as Goal['status'],
@@ -283,6 +286,42 @@ export function toReview(
     submittedAt: row.submittedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  };
+}
+
+export function toOneOnOneActionItem(
+  row: InferSelectModel<typeof schema.oneOnOneActionItems>,
+): OneOnOneActionItem {
+  return {
+    id: row.id,
+    oneOnOneId: row.oneOnOneId,
+    title: row.title,
+    assigneeId: row.assigneeId,
+    completed: row.completed,
+    createdAt: row.createdAt,
+  };
+}
+
+export function toOneOnOne(
+  row: InferSelectModel<typeof schema.oneOnOnes>,
+  relations: {
+    manager?: EmployeeRef;
+    employee?: EmployeeRef;
+    actionItems?: OneOnOneActionItem[];
+  } = {},
+): OneOnOne {
+  return {
+    id: row.id,
+    managerId: row.managerId,
+    manager: relations.manager,
+    employeeId: row.employeeId,
+    employee: relations.employee,
+    scheduledFor: row.scheduledFor,
+    agenda: row.agenda,
+    notes: row.notes,
+    completed: row.completed,
+    actionItems: relations.actionItems,
+    createdAt: row.createdAt,
   };
 }
 
