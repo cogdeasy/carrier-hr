@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Approvals } from './Approvals';
@@ -10,7 +10,10 @@ type Tab = 'mine' | 'approvals' | 'calendar' | 'holidays';
 
 export function TimeOffPage() {
   const { can } = useAuth();
-  const [tab, setTab] = useState<Tab>('mine');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = (searchParams.get('tab') as Tab | null) ?? 'mine';
+  const setTab = (next: Tab) =>
+    setSearchParams(next === 'mine' ? {} : { tab: next }, { replace: true });
 
   const canApprove = can('timeoff:approve');
   const canViewTeam = canApprove || can('timeoff:read');

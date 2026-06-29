@@ -274,7 +274,7 @@ export async function createRequest(
       type: 'timeoff_request',
       title: 'New time-off request',
       body: `A team member requested ${totalDays} day(s) of ${input.type} leave.`,
-      link: '/time-off',
+      link: '/time-off?tab=approvals',
     });
   }
 
