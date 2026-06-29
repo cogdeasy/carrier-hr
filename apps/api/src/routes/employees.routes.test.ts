@@ -312,6 +312,33 @@ describe('profile PII scoping', () => {
     expect(body.emergencyContact).toBeNull();
   });
 
+  it('redacts PII in the directory list for an unrelated peer', async () => {
+    const token = await login(ctx.app, 'peer@collins.com');
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/employees?search=subject@collins.com&pageSize=10',
+      headers: authHeader(token),
+    });
+    const subject = res
+      .json()
+      .data.find((e: { id: string }) => e.id === subjectId) as { personalPhone: unknown };
+    expect(subject).toBeDefined();
+    expect(subject.personalPhone).toBeNull();
+  });
+
+  it('exposes PII in the directory list to HR', async () => {
+    const token = await login(ctx.app, 'hr3@collins.com');
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/employees?search=subject@collins.com&pageSize=10',
+      headers: authHeader(token),
+    });
+    const subject = res
+      .json()
+      .data.find((e: { id: string }) => e.id === subjectId) as { personalPhone: unknown };
+    expect(subject.personalPhone).toBe('+1-555-0100');
+  });
+
   it("exposes PII to the subject's manager", async () => {
     const token = await login(ctx.app, 'boss@collins.com');
     const res = await ctx.app.inject({

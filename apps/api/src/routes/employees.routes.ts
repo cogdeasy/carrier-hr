@@ -30,7 +30,7 @@ export async function employeeRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/', { onRequest: [app.requirePermission('employee:read')] }, async (req) => {
     const q = parse(listEmployeesQuerySchema, req.query);
-    return listEmployees(app.db, q);
+    return listEmployees(app.db, q, viewerOf(req));
   });
 
   app.get('/org-chart', { onRequest: [app.requirePermission('org:read')] }, async (req) => {
@@ -45,7 +45,7 @@ export async function employeeRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/:id/reports', { onRequest: [app.requirePermission('employee:read')] }, async (req) => {
     const { id } = parse(z.object({ id: z.string() }), req.params);
-    return listDirectReports(app.db, id);
+    return listDirectReports(app.db, id, viewerOf(req));
   });
 
   app.post('/', { onRequest: [app.requirePermission('employee:write')] }, async (req, reply) => {

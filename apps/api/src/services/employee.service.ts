@@ -49,6 +49,7 @@ const PII_FIELDS = ['personalPhone', 'dateOfBirth', 'address', 'emergencyContact
 export async function listEmployees(
   db: Database,
   params: ListEmployeesParams,
+  viewer?: Viewer,
 ): Promise<Paginated<Employee>> {
   const filters: SQL[] = [];
   if (params.search) {
@@ -88,7 +89,10 @@ export async function listEmployees(
     db,
     rows.map((r) => r.id),
   );
-  const data = rows.map((r) => toEmployee(r, roleMap.get(r.id) ?? []));
+  const data = rows.map((r) => {
+    const employee = toEmployee(r, roleMap.get(r.id) ?? []);
+    return viewer ? scopeEmployeePii(employee, viewer) : employee;
+  });
   return paginate(data, total, params.page, params.pageSize);
 }
 
@@ -336,7 +340,11 @@ export async function setEmployeeRoles(
   }
 }
 
-export async function listDirectReports(db: Database, managerId: string): Promise<Employee[]> {
+export async function listDirectReports(
+  db: Database,
+  managerId: string,
+  viewer?: Viewer,
+): Promise<Employee[]> {
   const rows = await db
     .select()
     .from(employees)
@@ -346,7 +354,10 @@ export async function listDirectReports(db: Database, managerId: string): Promis
     db,
     rows.map((r) => r.id),
   );
-  return rows.map((r) => toEmployee(r, roleMap.get(r.id) ?? []));
+  return rows.map((r) => {
+    const employee = toEmployee(r, roleMap.get(r.id) ?? []);
+    return viewer ? scopeEmployeePii(employee, viewer) : employee;
+  });
 }
 
 /** Builds the org chart rooted at employees with no manager (or a given root).

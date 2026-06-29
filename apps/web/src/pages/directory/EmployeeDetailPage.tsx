@@ -197,6 +197,7 @@ export function EmployeeDetailPage() {
       {canManage ? (
         <>
           <EditEmployeeModal
+            key={employee.updatedAt}
             employee={employee}
             open={editOpen}
             onClose={() => setEditOpen(false)}

@@ -100,7 +100,12 @@ export function ProfilePage() {
         <ChangePasswordCard />
       </div>
 
-      <EditContactModal me={me} open={editOpen} onClose={() => setEditOpen(false)} />
+      <EditContactModal
+        key={me.updatedAt}
+        me={me}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+      />
     </div>
   );
 }
