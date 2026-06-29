@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, like, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 import {
   hasPermission,
@@ -82,6 +82,20 @@ function assertJobVisible(job: JobRow, actor: RecruitingActor): void {
   if (canManage(actor.roles)) return;
   if (job.hiringManagerId === actor.employeeId) return;
   throw Forbidden('You do not have access to this requisition');
+}
+
+async function assertCandidateVisible(
+  db: Database,
+  candidate: CandidateRow,
+  actor: RecruitingActor,
+): Promise<void> {
+  if (canManage(actor.roles)) return;
+  assertJobVisible(await loadJob(db, candidate.jobId), actor);
+}
+
+/** Escapes LIKE metacharacters so user search text matches literally. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -187,7 +201,9 @@ export async function listJobs(
   const filters = [];
   if (query.status) filters.push(eq(jobRequisitions.status, query.status));
   if (query.department) filters.push(eq(jobRequisitions.department, query.department));
-  if (query.search) filters.push(like(jobRequisitions.title, `%${query.search}%`));
+  if (query.search) {
+    filters.push(sql`${jobRequisitions.title} like ${`%${escapeLike(query.search)}%`} escape '\\'`);
+  }
   if (!canManage(actor.roles)) {
     filters.push(eq(jobRequisitions.hiringManagerId, actor.employeeId));
   }
@@ -429,8 +445,10 @@ export async function updateCandidate(
   db: Database,
   id: string,
   input: UpdateCandidateInput,
+  actor: RecruitingActor,
 ): Promise<Candidate> {
   const row = await loadCandidate(db, id);
+  await assertCandidateVisible(db, row, actor);
   await db
     .update(candidates)
     .set({
@@ -587,8 +605,10 @@ async function loadNames(db: Database, ids: string[]): Promise<Map<string, strin
 export async function scheduleInterview(
   db: Database,
   input: ScheduleInterviewInput,
+  actor: RecruitingActor,
 ): Promise<Interview> {
   const candidate = await loadCandidate(db, input.candidateId);
+  await assertCandidateVisible(db, candidate, actor);
   if ((TERMINAL_STAGES as readonly string[]).includes(candidate.stage)) {
     throw BadRequest('Cannot schedule an interview for a hired or rejected candidate');
   }
@@ -622,9 +642,11 @@ export async function updateInterview(
   db: Database,
   id: string,
   input: UpdateInterviewInput,
+  actor: RecruitingActor,
 ): Promise<Interview> {
   const [row] = await db.select().from(interviews).where(eq(interviews.id, id)).limit(1);
   if (!row) throw NotFound('Interview not found');
+  await assertCandidateVisible(db, await loadCandidate(db, row.candidateId), actor);
   if (row.status !== 'scheduled' && (input.scheduledAt || input.interviewerId)) {
     throw BadRequest('Only a scheduled interview can be rescheduled');
   }
@@ -658,6 +680,7 @@ export async function submitScorecard(
   interviewId: string,
   interviewerId: string,
   input: SubmitScorecardInput,
+  actor: RecruitingActor,
 ): Promise<Scorecard> {
   const [interview] = await db
     .select()
@@ -665,6 +688,7 @@ export async function submitScorecard(
     .where(eq(interviews.id, interviewId))
     .limit(1);
   if (!interview) throw NotFound('Interview not found');
+  await assertCandidateVisible(db, await loadCandidate(db, interview.candidateId), actor);
   const [existing] = await db
     .select({ id: interviewScorecards.id })
     .from(interviewScorecards)
@@ -707,8 +731,10 @@ export async function createOffer(
   db: Database,
   input: CreateOfferInput,
   extendedById: string,
+  actor: RecruitingActor,
 ): Promise<Offer> {
   const candidate = await loadCandidate(db, input.candidateId);
+  await assertCandidateVisible(db, candidate, actor);
   if (candidate.stage !== 'offer') {
     throw BadRequest('Candidate must be in the offer stage before an offer is drafted');
   }
@@ -744,9 +770,11 @@ export async function updateOffer(
   db: Database,
   id: string,
   input: UpdateOfferInput,
+  actor: RecruitingActor,
 ): Promise<Offer> {
   const [row] = await db.select().from(offers).where(eq(offers.id, id)).limit(1);
   if (!row) throw NotFound('Offer not found');
+  await assertCandidateVisible(db, await loadCandidate(db, row.candidateId), actor);
   if (row.status !== 'draft') throw BadRequest('Only a draft offer can be edited');
   await db
     .update(offers)
@@ -776,9 +804,11 @@ export async function actOnOffer(
   db: Database,
   id: string,
   input: OfferActionInput,
+  actor: RecruitingActor,
 ): Promise<Offer> {
   const [row] = await db.select().from(offers).where(eq(offers.id, id)).limit(1);
   if (!row) throw NotFound('Offer not found');
+  await assertCandidateVisible(db, await loadCandidate(db, row.candidateId), actor);
   const transition = OFFER_ACTION_TRANSITIONS[input.action];
   if (!transition.from.includes(row.status)) {
     throw BadRequest(`Cannot ${input.action} an offer that is ${row.status}`);

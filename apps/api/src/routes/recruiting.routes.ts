@@ -110,7 +110,7 @@ export async function recruitingRoutes(app: FastifyInstance): Promise<void> {
   app.patch('/candidates/:id', write, async (req) => {
     const { id } = parse(idParam, req.params);
     const input = parse(updateCandidateSchema, req.body);
-    return updateCandidate(app.db, id, input);
+    return updateCandidate(app.db, id, input, actor(req));
   });
 
   app.post('/candidates/:id/stage', write, async (req) => {
@@ -122,39 +122,39 @@ export async function recruitingRoutes(app: FastifyInstance): Promise<void> {
   // Interviews & scorecards --------------------------------------------------
   app.post('/interviews', write, async (req, reply) => {
     const input = parse(scheduleInterviewSchema, req.body);
-    const interview = await scheduleInterview(app.db, input);
+    const interview = await scheduleInterview(app.db, input, actor(req));
     return reply.status(201).send(interview);
   });
 
   app.patch('/interviews/:id', write, async (req) => {
     const { id } = parse(idParam, req.params);
     const input = parse(updateInterviewSchema, req.body);
-    return updateInterview(app.db, id, input);
+    return updateInterview(app.db, id, input, actor(req));
   });
 
   app.post('/interviews/:id/scorecard', write, async (req, reply) => {
     const { id } = parse(idParam, req.params);
     const input = parse(submitScorecardSchema, req.body);
-    const scorecard = await submitScorecard(app.db, id, req.principal.employeeId, input);
+    const scorecard = await submitScorecard(app.db, id, req.principal.employeeId, input, actor(req));
     return reply.status(201).send(scorecard);
   });
 
   // Offers -------------------------------------------------------------------
   app.post('/offers', write, async (req, reply) => {
     const input = parse(createOfferSchema, req.body);
-    const offer = await createOffer(app.db, input, req.principal.employeeId);
+    const offer = await createOffer(app.db, input, req.principal.employeeId, actor(req));
     return reply.status(201).send(offer);
   });
 
   app.patch('/offers/:id', write, async (req) => {
     const { id } = parse(idParam, req.params);
     const input = parse(updateOfferSchema, req.body);
-    return updateOffer(app.db, id, input);
+    return updateOffer(app.db, id, input, actor(req));
   });
 
   app.post('/offers/:id/action', write, async (req) => {
     const { id } = parse(idParam, req.params);
     const input = parse(offerActionSchema, req.body);
-    return actOnOffer(app.db, id, input);
+    return actOnOffer(app.db, id, input, actor(req));
   });
 }
