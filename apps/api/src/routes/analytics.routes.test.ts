@@ -173,6 +173,29 @@ describe('analytics: org-wide HR dashboard', () => {
     expect(body.filters.to).toBe('2024-12-31');
   });
 
+  it('scopes flow metrics to the categorical filter', async () => {
+    const token = await login(ctx.app, 'hr@collins.com');
+    const inDept = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/analytics/hr?department=Flight%20Sciences&from=2024-01-01&to=2024-12-31',
+      headers: authHeader(token),
+    });
+    expect(inDept.statusCode).toBe(200);
+    expect(inDept.json().hiresInRange).toBe(1);
+    expect(inDept.json().terminationsInRange).toBe(1);
+
+    // A department with no members has no in-range hires/terminations, proving
+    // the categorical filter is applied to the flow metrics (not just headcount).
+    const otherDept = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/analytics/hr?department=Engineering&from=2024-01-01&to=2024-12-31',
+      headers: authHeader(token),
+    });
+    expect(otherDept.statusCode).toBe(200);
+    expect(otherDept.json().hiresInRange).toBe(0);
+    expect(otherDept.json().terminationsInRange).toBe(0);
+  });
+
   it('rejects an inverted date range', async () => {
     const token = await login(ctx.app, 'hr@collins.com');
     const res = await ctx.app.inject({
@@ -294,13 +317,23 @@ describe('analytics: team dashboard scoping', () => {
       startDate: '2026-01-01',
       endDate: '2026-06-30',
     });
-    await ctx.db.insert(reviews).values({
-      id: createId('rev'),
-      cycleId: cycle,
-      employeeId: r1,
-      reviewerId: manager.employeeId,
-      status: 'manager_review',
-    });
+    await ctx.db.insert(reviews).values([
+      {
+        id: createId('rev'),
+        cycleId: cycle,
+        employeeId: r1,
+        reviewerId: manager.employeeId,
+        status: 'manager_review',
+      },
+      // A completed review must not inflate the pending count.
+      {
+        id: createId('rev'),
+        cycleId: cycle,
+        employeeId: r2,
+        reviewerId: manager.employeeId,
+        status: 'completed',
+      },
+    ]);
     await ctx.db.insert(goals).values([
       { id: createId('gol'), employeeId: r1, title: 'G1', status: 'active' },
       { id: createId('gol'), employeeId: r2, title: 'G2', status: 'at_risk' },

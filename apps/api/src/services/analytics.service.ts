@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gte, inArray, lte, ne, sql, type SQL } from 'drizzle-orm';
 import {
   ACCRUAL_TIME_OFF_TYPES,
   type AnalyticsDataset,
@@ -49,14 +49,33 @@ function resolveRange(filters: AnalyticsFilters): { from: string; to: string } {
   return { from, to };
 }
 
-/** Build the categorical predicate shared by the headcount distributions. */
-function populationFilter(filters: AnalyticsFilters): SQL | undefined {
+/**
+ * Categorical (department/division/location) predicates on `employees`. These
+ * scope every employee-derived metric so the whole dashboard reflects the same
+ * slice of the org when a filter is applied. Status is excluded here because it
+ * is a point-in-time attribute, not an org slice.
+ */
+function categoricalScope(filters: AnalyticsFilters): SQL[] {
   const conditions: SQL[] = [];
   if (filters.department) conditions.push(eq(employees.department, filters.department));
   if (filters.division) conditions.push(eq(employees.division, filters.division));
   if (filters.location) conditions.push(eq(employees.location, filters.location));
+  return conditions;
+}
+
+/** Build the categorical predicate shared by the headcount distributions. */
+function populationFilter(filters: AnalyticsFilters): SQL | undefined {
+  const conditions = categoricalScope(filters);
   if (filters.status) conditions.push(eq(employees.status, filters.status));
   return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
+/** Open-requisition predicate scoped by the categorical filters it supports. */
+function requisitionScope(filters: AnalyticsFilters): SQL {
+  const conditions: SQL[] = [eq(jobRequisitions.status, 'open')];
+  if (filters.department) conditions.push(eq(jobRequisitions.department, filters.department));
+  if (filters.location) conditions.push(eq(jobRequisitions.location, filters.location));
+  return and(...conditions)!;
 }
 
 function toCategoryCounts(rows: { label: string | null; count: number }[]): CategoryCount[] {
@@ -79,17 +98,12 @@ export async function getHrDashboard(
 ): Promise<HrDashboard> {
   const { from, to } = resolveRange(filters);
   const population = populationFilter(filters);
+  const cat = categoricalScope(filters);
 
   // Headcount distributions are aggregated in SQL over the filtered population.
   // The status distribution intentionally ignores a `status` filter so the
   // breakdown stays meaningful, but still honours the other categorical filters.
-  const statusPopulation = (() => {
-    const conditions: SQL[] = [];
-    if (filters.department) conditions.push(eq(employees.department, filters.department));
-    if (filters.division) conditions.push(eq(employees.division, filters.division));
-    if (filters.location) conditions.push(eq(employees.location, filters.location));
-    return conditions.length > 0 ? and(...conditions) : undefined;
-  })();
+  const statusPopulation = cat.length > 0 ? and(...cat) : undefined;
 
   const countExpr = sql<number>`count(*)`;
   const [
@@ -145,7 +159,7 @@ export async function getHrDashboard(
     db
       .select({ label: jobRequisitions.department, count: countExpr })
       .from(jobRequisitions)
-      .where(eq(jobRequisitions.status, 'open'))
+      .where(requisitionScope(filters))
       .groupBy(jobRequisitions.department),
   ]);
 
@@ -172,11 +186,12 @@ export async function getHrDashboard(
       ? round(activeTenures.reduce((a, b) => a + b, 0) / activeTenures.length)
       : 0;
 
-  // Hires and terminations within the window, aggregated in SQL.
+  // Hires and terminations within the window, aggregated in SQL and scoped to
+  // the same categorical population as the distributions.
   const [hireCountRow] = await db
     .select({ count: countExpr })
     .from(employees)
-    .where(and(gte(employees.hireDate, from), lte(employees.hireDate, to)));
+    .where(and(gte(employees.hireDate, from), lte(employees.hireDate, to), ...cat));
   const hiresInRange = Number(hireCountRow?.count ?? 0);
 
   const [termCountRow] = await db
@@ -187,6 +202,7 @@ export async function getHrDashboard(
         sql`${employees.terminationDate} is not null`,
         gte(employees.terminationDate, from),
         lte(employees.terminationDate, to),
+        ...cat,
       ),
     );
   const terminationsInRange = Number(termCountRow?.count ?? 0);
@@ -195,7 +211,7 @@ export async function getHrDashboard(
   const [newHiresRow] = await db
     .select({ count: countExpr })
     .from(employees)
-    .where(sql`substr(${employees.hireDate}, 1, 7) = ${thisMonth}`);
+    .where(and(sql`substr(${employees.hireDate}, 1, 7) = ${thisMonth}`, ...cat));
   const newHiresThisMonth = Number(newHiresRow?.count ?? 0);
 
   // Monthly hires/terminations grouped in SQL, then folded into a point-in-time
@@ -206,6 +222,7 @@ export async function getHrDashboard(
     db
       .select({ month: sql<string>`substr(${employees.hireDate}, 1, 7)`, count: countExpr })
       .from(employees)
+      .where(cat.length > 0 ? and(...cat) : undefined)
       .groupBy(sql`substr(${employees.hireDate}, 1, 7)`),
     db
       .select({
@@ -213,11 +230,12 @@ export async function getHrDashboard(
         count: countExpr,
       })
       .from(employees)
-      .where(sql`${employees.terminationDate} is not null`)
+      .where(and(sql`${employees.terminationDate} is not null`, ...cat))
       .groupBy(sql`substr(${employees.terminationDate}, 1, 7)`),
     db
       .select({ hireDate: employees.hireDate, terminationDate: employees.terminationDate })
-      .from(employees),
+      .from(employees)
+      .where(cat.length > 0 ? and(...cat) : undefined),
   ]);
 
   const hiresMap = new Map(hiresByMonth.map((r) => [r.month, Number(r.count)]));
@@ -255,8 +273,8 @@ export async function getHrDashboard(
   const avgHeadcount = (startHeadcount + endHeadcount) / 2 || activeEmployees || 1;
   const turnoverRate = round((terminationsInRange / avgHeadcount) * 100);
 
-  const timeOffUtilization = await getTimeOffUtilization(db);
-  const trainingComplianceRate = await getTrainingComplianceRate(db);
+  const timeOffUtilization = await getTimeOffUtilization(db, filters);
+  const trainingComplianceRate = await getTrainingComplianceRate(db, filters);
 
   const [pendingTimeOffRow] = await db
     .select({ count: countExpr })
@@ -307,8 +325,11 @@ export async function getHrDashboard(
   };
 }
 
-/** Aggregate accrued vs. used leave across all balances for the current year. */
-async function getTimeOffUtilization(db: Database): Promise<HrDashboard['timeOffUtilization']> {
+/** Aggregate accrued vs. used leave across the filtered population for the current year. */
+async function getTimeOffUtilization(
+  db: Database,
+  filters: AnalyticsFilters = {},
+): Promise<HrDashboard['timeOffUtilization']> {
   const year = new Date().getUTCFullYear();
   const rows = await db
     .select({
@@ -317,7 +338,8 @@ async function getTimeOffUtilization(db: Database): Promise<HrDashboard['timeOff
       used: sql<number>`sum(${timeOffBalances.usedDays})`,
     })
     .from(timeOffBalances)
-    .where(eq(timeOffBalances.year, year))
+    .innerJoin(employees, eq(timeOffBalances.employeeId, employees.id))
+    .where(and(eq(timeOffBalances.year, year), ...categoricalScope(filters)))
     .groupBy(timeOffBalances.type);
 
   const order = ACCRUAL_TIME_OFF_TYPES as readonly string[];
@@ -339,7 +361,10 @@ async function getTimeOffUtilization(db: Database): Promise<HrDashboard['timeOff
  * Percentage of (active employee × required course) assignments that have been
  * completed. Treats every required course as assigned to every active employee.
  */
-async function getTrainingComplianceRate(db: Database): Promise<number> {
+async function getTrainingComplianceRate(
+  db: Database,
+  filters: AnalyticsFilters = {},
+): Promise<number> {
   const [requiredRow] = await db
     .select({ count: sql<number>`count(*)` })
     .from(courses)
@@ -349,7 +374,7 @@ async function getTrainingComplianceRate(db: Database): Promise<number> {
   const [activeRow] = await db
     .select({ count: sql<number>`count(*)` })
     .from(employees)
-    .where(eq(employees.status, 'active'));
+    .where(and(eq(employees.status, 'active'), ...categoricalScope(filters)));
   const activeCount = Number(activeRow?.count ?? 0);
 
   const denominator = requiredCount * activeCount;
@@ -371,6 +396,7 @@ async function getTrainingComplianceRate(db: Database): Promise<number> {
         eq(employees.status, 'active'),
         eq(courseEnrollments.status, 'completed'),
         inArray(courseEnrollments.courseId, requiredIds),
+        ...categoricalScope(filters),
       ),
     );
   const completed = Number(completedRow?.count ?? 0);
@@ -427,7 +453,13 @@ export async function getTeamDashboard(
     db
       .select({ count: countExpr })
       .from(reviews)
-      .where(and(inArray(reviews.employeeId, reportIds), eq(reviews.reviewerId, managerId))),
+      .where(
+        and(
+          inArray(reviews.employeeId, reportIds),
+          eq(reviews.reviewerId, managerId),
+          ne(reviews.status, 'completed'),
+        ),
+      ),
     db
       .select({ status: goals.status, count: countExpr })
       .from(goals)
