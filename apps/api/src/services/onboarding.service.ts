@@ -217,6 +217,11 @@ export async function deleteTemplate(db: Database, id: string): Promise<void> {
     .where(eq(onboardingTemplates.id, id))
     .limit(1);
   if (!row) throw NotFound('Template not found');
+  await db.delete(onboardingTemplateItems).where(eq(onboardingTemplateItems.templateId, id));
+  await db
+    .update(onboardingChecklists)
+    .set({ templateId: null })
+    .where(eq(onboardingChecklists.templateId, id));
   await db.delete(onboardingTemplates).where(eq(onboardingTemplates.id, id));
 }
 
