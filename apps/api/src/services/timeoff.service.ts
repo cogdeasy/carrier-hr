@@ -18,7 +18,7 @@ import {
 import { BadRequest, Forbidden, NotFound } from '../lib/errors.js';
 import { businessDaysBetween, nowIso, yearOf } from '../lib/dates.js';
 import { createId } from '../lib/ids.js';
-import { toTimeOffRequest } from './mappers.js';
+import { toEmployeeRef, toTimeOffRequest } from './mappers.js';
 import { createNotification } from './notification.service.js';
 
 export async function getBalances(
@@ -82,7 +82,28 @@ export async function listRequests(
     .from(timeOffRequests)
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(desc(timeOffRequests.createdAt));
-  return rows.map(toTimeOffRequest);
+
+  // Hydrate the employee/approver refs the directory & approvals UI relies on,
+  // batch-fetching every referenced person in a single query.
+  const personIds = [
+    ...new Set(rows.flatMap((r) => [r.employeeId, r.approverId].filter((v): v is string => !!v))),
+  ];
+  const refs = await employeeRefMap(db, personIds);
+  return rows.map((r) =>
+    toTimeOffRequest(r, {
+      employee: refs.get(r.employeeId),
+      approver: r.approverId ? (refs.get(r.approverId) ?? null) : null,
+    }),
+  );
+}
+
+async function employeeRefMap(
+  db: Database,
+  ids: string[],
+): Promise<Map<string, ReturnType<typeof toEmployeeRef>>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db.select().from(employees).where(inArray(employees.id, ids));
+  return new Map(rows.map((row) => [row.id, toEmployeeRef(row)]));
 }
 
 export async function createRequest(

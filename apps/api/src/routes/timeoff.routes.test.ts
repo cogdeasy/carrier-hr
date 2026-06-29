@@ -74,7 +74,12 @@ describe('time-off approval workflow', () => {
       headers: authHeader(mgrToken),
     });
     expect(approvals.statusCode).toBe(200);
-    expect(approvals.json().some((r: { id: string }) => r.id === requestId)).toBe(true);
+    const queued = (approvals.json() as { id: string; employee?: { displayName: string } }[]).find(
+      (r) => r.id === requestId,
+    );
+    expect(queued).toBeDefined();
+    // The approvals queue must carry the real submitter identity, not a placeholder.
+    expect(queued!.employee?.displayName).toBe('Eli Employee');
 
     // Manager approves.
     const decision = await ctx.app.inject({

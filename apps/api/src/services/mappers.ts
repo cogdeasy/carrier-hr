@@ -15,6 +15,7 @@ import type {
   Payslip,
   PayslipLine,
   Review,
+  ReviewCycle,
   Role,
   TimeOffRequest,
   Timesheet,
@@ -82,10 +83,12 @@ export function toEmployee(row: EmployeeRow, roles: Role[]): Employee {
 
 export function toTimeOffRequest(
   row: InferSelectModel<typeof schema.timeOffRequests>,
+  relations: { employee?: EmployeeRef; approver?: EmployeeRef | null } = {},
 ): TimeOffRequest {
   return {
     id: row.id,
     employeeId: row.employeeId,
+    employee: relations.employee,
     type: row.type as TimeOffRequest['type'],
     startDate: row.startDate,
     endDate: row.endDate,
@@ -93,6 +96,7 @@ export function toTimeOffRequest(
     reason: row.reason,
     status: row.status as TimeOffRequest['status'],
     approverId: row.approverId,
+    approver: relations.approver ?? undefined,
     decisionNote: row.decisionNote,
     decidedAt: row.decidedAt,
     createdAt: row.createdAt,
@@ -174,12 +178,29 @@ export function toGoal(row: InferSelectModel<typeof schema.goals>): Goal {
   };
 }
 
-export function toReview(row: InferSelectModel<typeof schema.reviews>): Review {
+export function toReviewCycle(row: InferSelectModel<typeof schema.reviewCycles>): ReviewCycle {
+  return {
+    id: row.id,
+    name: row.name,
+    status: row.status as ReviewCycle['status'],
+    startDate: row.startDate,
+    endDate: row.endDate,
+    createdAt: row.createdAt,
+  };
+}
+
+export function toReview(
+  row: InferSelectModel<typeof schema.reviews>,
+  relations: { cycle?: ReviewCycle; employee?: EmployeeRef; reviewer?: EmployeeRef } = {},
+): Review {
   return {
     id: row.id,
     cycleId: row.cycleId,
+    cycle: relations.cycle,
     employeeId: row.employeeId,
+    employee: relations.employee,
     reviewerId: row.reviewerId,
+    reviewer: relations.reviewer,
     status: row.status as Review['status'],
     selfAssessment: row.selfAssessment,
     managerAssessment: row.managerAssessment,

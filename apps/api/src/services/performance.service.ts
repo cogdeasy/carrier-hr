@@ -9,11 +9,11 @@ import type {
   UpdateGoalInput,
 } from '@carrier-hr/shared';
 import type { Database } from '../db/client.js';
-import { goals, reviewCycles, reviews } from '../db/schema.js';
+import { employees, goals, reviewCycles, reviews } from '../db/schema.js';
 import { BadRequest, Forbidden, NotFound } from '../lib/errors.js';
 import { createId } from '../lib/ids.js';
 import { nowIso } from '../lib/dates.js';
-import { toGoal, toReview } from './mappers.js';
+import { toEmployeeRef, toGoal, toReview, toReviewCycle } from './mappers.js';
 import { createNotification } from './notification.service.js';
 
 export async function listGoals(db: Database, employeeId: string): Promise<Goal[]> {
@@ -103,7 +103,25 @@ export async function listReviews(
     .from(reviews)
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(desc(reviews.updatedAt));
-  return rows.map(toReview);
+  if (rows.length === 0) return [];
+
+  // Hydrate the cycle name + employee/reviewer refs the performance UI renders,
+  // batch-fetching all referenced cycles and people in one query each.
+  const cycleIds = [...new Set(rows.map((r) => r.cycleId))];
+  const personIds = [...new Set(rows.flatMap((r) => [r.employeeId, r.reviewerId]))];
+  const [cycleRows, personRows] = await Promise.all([
+    db.select().from(reviewCycles).where(inArray(reviewCycles.id, cycleIds)),
+    db.select().from(employees).where(inArray(employees.id, personIds)),
+  ]);
+  const cycles = new Map(cycleRows.map((c) => [c.id, toReviewCycle(c)]));
+  const people = new Map(personRows.map((p) => [p.id, toEmployeeRef(p)]));
+  return rows.map((r) =>
+    toReview(r, {
+      cycle: cycles.get(r.cycleId),
+      employee: people.get(r.employeeId),
+      reviewer: people.get(r.reviewerId),
+    }),
+  );
 }
 
 export async function getReview(db: Database, id: string): Promise<Review> {
