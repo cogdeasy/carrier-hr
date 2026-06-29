@@ -216,6 +216,16 @@ describe('analytics: org-wide HR dashboard', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('rejects an excessively wide date range', async () => {
+    const token = await login(ctx.app, 'hr@collins.com');
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/analytics/hr?from=2000-01-01&to=2024-01-01',
+      headers: authHeader(token),
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it('exports a dataset as CSV', async () => {
     const token = await login(ctx.app, 'hr@collins.com');
     const res = await ctx.app.inject({
@@ -314,6 +324,8 @@ describe('analytics: team dashboard scoping', () => {
     await seedUser(ctx.db, { email: 'ic@collins.com', roles: ['employee'] });
     const hr = await seedUser(ctx.db, { email: 'hr3@collins.com', roles: ['hr_admin'] });
     void hr;
+    const exec = await seedUser(ctx.db, { email: 'exec@collins.com', roles: ['executive'] });
+    void exec;
 
     const r1 = await addEmployee(ctx, { managerId: manager.employeeId, status: 'active' });
     const r2 = await addEmployee(ctx, { managerId: manager.employeeId, status: 'on_leave' });
@@ -436,6 +448,19 @@ describe('analytics: team dashboard scoping', () => {
 
   it('allows an HR admin to inspect any manager team', async () => {
     const token = await login(ctx.app, 'hr3@collins.com');
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: `/api/analytics/team?managerId=${manager.employeeId}`,
+      headers: authHeader(token),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().teamSize).toBe(2);
+  });
+
+  // Executives hold org-wide `analytics:read` but not `analytics:read:team`;
+  // they should still be able to inspect a specific manager's team.
+  it('allows an executive to inspect any manager team', async () => {
+    const token = await login(ctx.app, 'exec@collins.com');
     const res = await ctx.app.inject({
       method: 'GET',
       url: `/api/analytics/team?managerId=${manager.employeeId}`,

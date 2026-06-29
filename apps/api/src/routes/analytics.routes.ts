@@ -36,11 +36,21 @@ export async function analyticsRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // Team analytics for the authenticated manager. Admins may inspect any
-  // manager's team via `?managerId=`; everyone else is scoped to themselves.
+  // Team analytics. Managers (`analytics:read:team`) see their own team;
+  // org-wide readers (`analytics:read`, e.g. HR/executive) may also reach this
+  // route and inspect any manager's team via `?managerId=`.
   app.get(
     '/team',
-    { onRequest: [app.requirePermission('analytics:read:team')] },
+    {
+      onRequest: async (req) => {
+        if (
+          !hasPermission(req.principal.roles, 'analytics:read:team') &&
+          !hasPermission(req.principal.roles, 'analytics:read')
+        ) {
+          throw Forbidden('Missing required permission: analytics:read:team');
+        }
+      },
+    },
     async (req) => {
       const { managerId } = parse(teamQuerySchema, req.query);
       const isOrgWide = hasPermission(req.principal.roles, 'analytics:read');

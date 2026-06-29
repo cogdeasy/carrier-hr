@@ -44,6 +44,14 @@ function round(value: number, decimals = 1): number {
  * the resolved bounds so a single supplied bound (e.g. a future `from`) that
  * crosses the default is rejected rather than silently yielding empty data.
  */
+const MAX_RANGE_MONTHS = 60;
+
+function monthsBetween(from: string, to: string): number {
+  const fromMonths = Number(from.slice(0, 4)) * 12 + Number(from.slice(5, 7));
+  const toMonths = Number(to.slice(0, 4)) * 12 + Number(to.slice(5, 7));
+  return toMonths - fromMonths;
+}
+
 function resolveRange(filters: AnalyticsFilters): { from: string; to: string } {
   const now = new Date();
   const to = filters.to ?? isoDay(now);
@@ -51,6 +59,11 @@ function resolveRange(filters: AnalyticsFilters): { from: string; to: string } {
   const from = filters.from ?? isoDay(defaultFrom);
   if (from > to) {
     throw BadRequest('`from` must be on or before `to`', { from, to });
+  }
+  // Bound the window so the per-month trend computation stays cheap regardless
+  // of caller-supplied bounds.
+  if (monthsBetween(from, to) > MAX_RANGE_MONTHS) {
+    throw BadRequest(`Date range may not exceed ${MAX_RANGE_MONTHS} months`, { from, to });
   }
   return { from, to };
 }
