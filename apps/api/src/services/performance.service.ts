@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, or, type SQL } from 'drizzle-orm';
 import type {
   CreateActionItemInput,
   CreateGoalInput,
@@ -45,12 +45,17 @@ import { createNotification } from './notification.service.js';
 
 export async function listGoals(
   db: Database,
-  employeeIds: string | string[],
+  employeeIds: string | string[] | null,
   filters: Pick<GoalQuery, 'cycleId' | 'status'> = {},
 ): Promise<Goal[]> {
-  const ids = Array.isArray(employeeIds) ? employeeIds : [employeeIds];
-  if (ids.length === 0) return [];
-  const where = [inArray(goals.employeeId, ids)];
+  const where: SQL[] = [];
+  // `null` means "every employee" (admin org-wide view); an empty array means
+  // "no one matched" and yields no goals.
+  if (employeeIds !== null) {
+    const ids = Array.isArray(employeeIds) ? employeeIds : [employeeIds];
+    if (ids.length === 0) return [];
+    where.push(inArray(goals.employeeId, ids));
+  }
   if (filters.cycleId) where.push(eq(goals.cycleId, filters.cycleId));
   if (filters.status) where.push(eq(goals.status, filters.status));
   const rows = await db
@@ -97,12 +102,15 @@ export async function updateGoal(
   if (!row) throw NotFound('Goal not found');
   if (row.employeeId !== employeeId) throw Forbidden('You can only edit your own goals');
   if (input.cycleId) await assertCycleExists(db, input.cycleId);
-  // Completing a goal pins progress to 100; reopening a completed goal drops it
-  // back below the bar so the UI never shows a "completed" goal at <100%.
   let progress = input.progress ?? row.progress;
   let status = input.status ?? row.status;
-  if (input.status === 'completed') progress = 100;
-  if (progress >= 100 && status === 'active') status = 'completed';
+  if (input.status === 'completed') {
+    progress = 100;
+  } else if (input.status === undefined && progress >= 100 && (status === 'active' || status === 'at_risk')) {
+    // Hitting 100% auto-completes an in-flight goal, but an explicit status
+    // choice always wins so users can reopen or re-scope a finished goal.
+    status = 'completed';
+  }
   await db
     .update(goals)
     .set({

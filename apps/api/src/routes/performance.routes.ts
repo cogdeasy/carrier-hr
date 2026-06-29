@@ -56,8 +56,7 @@ export async function performanceRoutes(app: FastifyInstance): Promise<void> {
 
     if (q.scope === 'all') {
       if (!isAdmin) throw Forbidden('Missing required permission: performance:admin');
-      const everyone = await listGoals(app.db, [], filters);
-      return everyone;
+      return listGoals(app.db, null, filters);
     }
     if (q.scope === 'team' || (q.employeeId && q.employeeId !== me)) {
       if (!canReadTeam && !isAdmin) {

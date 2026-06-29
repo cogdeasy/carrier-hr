@@ -290,6 +290,7 @@ describe('goals', () => {
   let manager: SeededUser;
   let report: SeededUser;
   let other: SeededUser;
+  let admin: SeededUser;
 
   beforeAll(async () => {
     ctx = await createTestApp();
@@ -300,6 +301,7 @@ describe('goals', () => {
       managerId: manager.employeeId,
     });
     other = await seedUser(ctx.db, { email: 'goth@collins.com', roles: ['employee'] });
+    admin = await seedUser(ctx.db, { email: 'gadm@collins.com', roles: ['hr_admin'] });
   });
 
   afterAll(async () => {
@@ -329,6 +331,68 @@ describe('goals', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().status).toBe('completed');
     expect(res.json().progress).toBe(100);
+  });
+
+  it('auto-completes an at-risk goal when progress reaches 100', async () => {
+    const token = await authToken(ctx.app, 'grep@collins.com');
+    const id = await createGoal(token);
+    await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/performance/goals/${id}`,
+      headers: authHeader(token),
+      payload: { status: 'at_risk' },
+    });
+    const res = await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/performance/goals/${id}`,
+      headers: authHeader(token),
+      payload: { progress: 100 },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().status).toBe('completed');
+  });
+
+  it('honors an explicit status change on a completed goal instead of re-completing it', async () => {
+    const token = await authToken(ctx.app, 'grep@collins.com');
+    const id = await createGoal(token);
+    await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/performance/goals/${id}`,
+      headers: authHeader(token),
+      payload: { progress: 100 },
+    });
+    const res = await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/performance/goals/${id}`,
+      headers: authHeader(token),
+      payload: { status: 'active' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().status).toBe('active');
+  });
+
+  it('lets an admin list goals across the whole org with scope=all', async () => {
+    const repToken = await authToken(ctx.app, 'grep@collins.com');
+    await createGoal(repToken, 'Org-wide visible goal');
+    const adminToken = await authToken(ctx.app, 'gadm@collins.com');
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/performance/goals?scope=all',
+      headers: authHeader(adminToken),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().length).toBeGreaterThan(0);
+    void admin;
+  });
+
+  it('forbids a non-admin from using scope=all', async () => {
+    const token = await authToken(ctx.app, 'grep@collins.com');
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/performance/goals?scope=all',
+      headers: authHeader(token),
+    });
+    expect(res.statusCode).toBe(403);
   });
 
   it('rejects progress above 100', async () => {
