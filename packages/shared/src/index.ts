@@ -14,3 +14,4 @@ export * from './schemas/learning.js';
 export * from './schemas/document.js';
 export * from './schemas/notification.js';
 export * from './schemas/analytics.js';
+export * from './schemas/admin.js';
