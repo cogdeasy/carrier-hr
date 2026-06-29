@@ -138,6 +138,17 @@ describe('recruiting / ATS', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('rejects a partial salary edit that inverts the stored range', async () => {
+    const jobId = await createJob({ salaryMinCents: 1000_00, salaryMaxCents: 2000_00 });
+    const res = await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/recruiting/jobs/${jobId}`,
+      headers: authHeader(recruiterToken),
+      payload: { salaryMinCents: 5000_00 },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   // --- Applications ---------------------------------------------------------
 
   it('blocks applications to closed requisitions and de-dupes by email', async () => {

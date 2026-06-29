@@ -308,6 +308,13 @@ export async function updateJob(
   if (input.openings !== undefined && input.openings < row.filledCount) {
     throw BadRequest(`Openings cannot be fewer than the ${row.filledCount} already filled`);
   }
+  const salaryMinCents =
+    input.salaryMinCents === undefined ? row.salaryMinCents : input.salaryMinCents;
+  const salaryMaxCents =
+    input.salaryMaxCents === undefined ? row.salaryMaxCents : input.salaryMaxCents;
+  if (salaryMinCents !== null && salaryMaxCents !== null && salaryMaxCents < salaryMinCents) {
+    throw BadRequest('Maximum salary must be greater than or equal to minimum salary');
+  }
   await db
     .update(jobRequisitions)
     .set({
@@ -321,8 +328,8 @@ export async function updateJob(
         input.hiringManagerId === undefined ? row.hiringManagerId : input.hiringManagerId,
       recruiterId: input.recruiterId === undefined ? row.recruiterId : input.recruiterId,
       openings: input.openings ?? row.openings,
-      salaryMinCents: input.salaryMinCents === undefined ? row.salaryMinCents : input.salaryMinCents,
-      salaryMaxCents: input.salaryMaxCents === undefined ? row.salaryMaxCents : input.salaryMaxCents,
+      salaryMinCents,
+      salaryMaxCents,
       updatedAt: nowIso(),
     })
     .where(eq(jobRequisitions.id, id));

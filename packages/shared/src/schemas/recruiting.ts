@@ -81,7 +81,6 @@ export type UpdateJobInput = z.infer<typeof updateJobSchema>;
 
 export const jobStatusActionSchema = z.object({
   status: z.enum(['open', 'on_hold', 'closed']),
-  note: z.string().max(500).optional(),
 });
 export type JobStatusActionInput = z.infer<typeof jobStatusActionSchema>;
 
