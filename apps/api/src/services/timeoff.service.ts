@@ -515,7 +515,7 @@ export async function runCarryover(
     if (existing) {
       await db
         .update(timeOffBalances)
-        .set({ accruedDays: accrued, usedDays: 0 })
+        .set({ accruedDays: accrued })
         .where(eq(timeOffBalances.id, existing.id));
     } else {
       await db.insert(timeOffBalances).values({

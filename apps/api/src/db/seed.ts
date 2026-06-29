@@ -447,9 +447,12 @@ async function seedSupporting(db: Database): Promise<void> {
     });
   }
 
-  // Time-off requests (pending ones routed to managers for approval testing)
+  // Time-off requests (pending ones routed to managers for approval testing).
+  // The primary demo employee is left without seeded requests so the live
+  // request flow (and its e2e) always starts from a clean, non-overlapping slate.
   for (const e of active) {
     if (!e.managerId) continue;
+    if (e.email === 'employee@collins.com') continue;
     if (rand() < 0.4) {
       const start = daysAgo(-randInt(7, 40));
       const end = daysAgo(-(randInt(1, 6) + 7));

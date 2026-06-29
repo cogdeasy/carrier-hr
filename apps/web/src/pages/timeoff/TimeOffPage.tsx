@@ -29,12 +29,11 @@ export function TimeOffPage() {
       <PageHeader title="Time Off" description="Request leave and track your balances." />
 
       {visible.length > 1 ? (
-        <div className="mb-4 inline-flex rounded-lg border border-slate-200 bg-white p-1" role="tablist">
+        <div className="mb-4 inline-flex rounded-lg border border-slate-200 bg-white p-1">
           {visible.map((t) => (
             <button
               key={t.id}
-              role="tab"
-              aria-selected={tab === t.id}
+              aria-current={tab === t.id ? 'page' : undefined}
               onClick={() => setTab(t.id)}
               className={
                 tab === t.id

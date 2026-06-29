@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { employees, timeOffBalances } from '../db/schema.js';
 import { createId } from '../lib/ids.js';
 import {
@@ -534,6 +534,53 @@ describe('time-off holidays and calendar', () => {
     expect(target).toBeDefined();
     expect(target!.accruedDays).toBe(25);
     expect(target!.usedDays).toBe(0);
+  });
+
+  it('preserves usedDays when carryover is re-run for an already-used target year', async () => {
+    const hrToken = await login(ctx.app, 'cal.hr@collins.com');
+    const reEmp = await seedUser(ctx.db, { email: 'rerun.emp@collins.com', roles: ['employee'] });
+    const sourceYear = 2097;
+    await ctx.db.insert(timeOffBalances).values({
+      id: createId('tob'),
+      employeeId: reEmp.employeeId,
+      type: 'vacation',
+      accruedDays: 20,
+      usedDays: 4,
+      year: sourceYear,
+    });
+    const first = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/time-off/carryover',
+      headers: authHeader(hrToken),
+      payload: { fromYear: sourceYear },
+    });
+    expect(first.statusCode).toBe(200);
+
+    // Employee takes leave in the new year before carryover is re-run.
+    await ctx.db
+      .update(timeOffBalances)
+      .set({ usedDays: 3 })
+      .where(
+        and(
+          eq(timeOffBalances.employeeId, reEmp.employeeId),
+          eq(timeOffBalances.year, sourceYear + 1),
+        ),
+      );
+
+    const second = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/time-off/carryover',
+      headers: authHeader(hrToken),
+      payload: { fromYear: sourceYear },
+    });
+    expect(second.statusCode).toBe(200);
+
+    const rows = await ctx.db
+      .select()
+      .from(timeOffBalances)
+      .where(eq(timeOffBalances.employeeId, reEmp.employeeId));
+    const target = rows.find((r) => r.year === sourceYear + 1);
+    expect(target!.usedDays).toBe(3);
   });
 
   it('paginates request history', async () => {
