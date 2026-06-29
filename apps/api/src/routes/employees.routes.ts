@@ -48,8 +48,10 @@ export async function employeeRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/', { onRequest: [app.requirePermission('employee:write')] }, async (req, reply) => {
     const input = parse(createEmployeeSchema, req.body);
-    const employee = await createEmployee(app.db, input);
-    return reply.status(201).send(employee);
+    const { employee, temporaryPassword } = await createEmployee(app.db, input);
+    // The one-time temporary password is surfaced once so the admin can relay it
+    // to the new hire; it is never stored in plaintext or returned again.
+    return reply.status(201).send({ ...employee, temporaryPassword });
   });
 
   app.patch('/:id', { onRequest: [app.requirePermission('employee:write')] }, async (req) => {

@@ -13,8 +13,7 @@ import { Conflict, NotFound } from '../lib/errors.js';
 import { createId } from '../lib/ids.js';
 import { offset, paginate } from '../lib/pagination.js';
 import { nowIso } from '../lib/dates.js';
-import { hashPassword } from '../auth/password.js';
-import { getEnv } from '../env.js';
+import { generateTemporaryPassword, hashPassword } from '../auth/password.js';
 import { toEmployee, toEmployeeRef, displayName } from './mappers.js';
 import { rolesByEmployee, rolesForEmployee } from './roles.service.js';
 
@@ -92,14 +91,23 @@ function isUniqueViolation(err: unknown): boolean {
   return /UNIQUE constraint failed|SQLITE_CONSTRAINT/i.test(message);
 }
 
+export interface ProvisionedEmployee {
+  employee: Employee;
+  /** One-time temporary password the admin relays to the new hire. */
+  temporaryPassword: string;
+}
+
 export async function createEmployee(
   db: Database,
   input: CreateEmployeeInput,
-): Promise<Employee> {
+): Promise<ProvisionedEmployee> {
+  // Emails are matched case-insensitively at login (always lowercased), so we
+  // normalize on the way in to keep the directory and credentials consistent.
+  const email = input.email.toLowerCase();
   const [existing] = await db
     .select({ id: employees.id })
     .from(employees)
-    .where(eq(employees.email, input.email))
+    .where(eq(employees.email, email))
     .limit(1);
   if (existing) throw Conflict('An employee with this email already exists');
 
@@ -115,7 +123,7 @@ export async function createEmployee(
         employeeNumber,
         firstName: input.firstName,
         lastName: input.lastName,
-        email: input.email,
+        email,
         workPhone: input.workPhone ?? null,
         jobTitle: input.jobTitle,
         department: input.department,
@@ -137,22 +145,25 @@ export async function createEmployee(
   }
   if (!created) throw Conflict('Could not allocate a unique employee number, please retry');
 
-  // Provision a login so the new hire can sign in. They receive a temporary
-  // password and are forced to change it on first login.
+  // Provision a login so the new hire can sign in. Each account gets its own
+  // high-entropy temporary password (never a shared default) and is forced to
+  // change it on first login.
   const roles: Role[] = input.roles.length ? input.roles : ['employee'];
   const userId = createId('usr');
+  const temporaryPassword = generateTemporaryPassword();
   await db.insert(users).values({
     id: userId,
     employeeId: id,
-    email: input.email,
-    passwordHash: await hashPassword(getEnv().SEED_DEFAULT_PASSWORD),
+    email,
+    passwordHash: await hashPassword(temporaryPassword),
     mustChangePassword: true,
   });
   for (const role of roles) {
     await db.insert(userRoles).values({ id: createId('rol'), userId, role });
   }
 
-  return getEmployee(db, id);
+  const employee = await getEmployee(db, id);
+  return { employee, temporaryPassword };
 }
 
 export async function updateEmployee(
@@ -163,12 +174,14 @@ export async function updateEmployee(
   const [row] = await db.select().from(employees).where(eq(employees.id, id)).limit(1);
   if (!row) throw NotFound('Employee not found');
 
+  const nextEmail = input.email ? input.email.toLowerCase() : row.email;
+
   await db
     .update(employees)
     .set({
       firstName: input.firstName ?? row.firstName,
       lastName: input.lastName ?? row.lastName,
-      email: input.email ?? row.email,
+      email: nextEmail,
       workPhone: input.workPhone === undefined ? row.workPhone : input.workPhone,
       personalPhone: input.personalPhone === undefined ? row.personalPhone : input.personalPhone,
       jobTitle: input.jobTitle ?? row.jobTitle,
@@ -188,6 +201,15 @@ export async function updateEmployee(
       updatedAt: nowIso(),
     })
     .where(eq(employees.id, id));
+
+  // Keep the login credential in sync — auth queries the users table, not the
+  // directory, so a stale users.email would lock the employee out.
+  if (nextEmail !== row.email) {
+    await db
+      .update(users)
+      .set({ email: nextEmail, updatedAt: nowIso() })
+      .where(eq(users.employeeId, id));
+  }
 
   return getEmployee(db, id);
 }

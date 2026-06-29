@@ -204,15 +204,26 @@ function CreateEmployeeModal({ open, onClose }: { open: boolean; onClose: () => 
     hireDate: new Date().toISOString().slice(0, 10),
   });
   const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{ name: string; temporaryPassword: string } | null>(null);
 
   const mutation = useMutation({
-    mutationFn: (input: CreateEmployeeInput) => api.post<Employee>('/employees', input),
-    onSuccess: () => {
+    mutationFn: (input: CreateEmployeeInput) =>
+      api.post<Employee & { temporaryPassword: string }>('/employees', input),
+    onSuccess: (created) => {
       void qc.invalidateQueries({ queryKey: ['employees'] });
-      onClose();
+      setResult({
+        name: `${created.firstName} ${created.lastName}`,
+        temporaryPassword: created.temporaryPassword,
+      });
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : 'Failed to create employee'),
   });
+
+  function handleClose() {
+    setResult(null);
+    setError(null);
+    onClose();
+  }
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -224,14 +235,44 @@ function CreateEmployeeModal({ open, onClose }: { open: boolean; onClose: () => 
     });
   }
 
+  if (result) {
+    return (
+      <Modal
+        open={open}
+        onClose={handleClose}
+        title="Employee created"
+        footer={
+          <Button onClick={handleClose}>Done</Button>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            {result.name}&rsquo;s account is ready. Share this one-time temporary password securely
+            — it won&rsquo;t be shown again, and they must change it at first sign-in.
+          </p>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm">
+            {result.temporaryPassword}
+          </div>
+          <button
+            type="button"
+            className="text-sm text-sky-600 hover:text-sky-700"
+            onClick={() => void navigator.clipboard?.writeText(result.temporaryPassword)}
+          >
+            Copy password
+          </button>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       title="Add employee"
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>
           <Button form="create-employee-form" type="submit" loading={mutation.isPending}>

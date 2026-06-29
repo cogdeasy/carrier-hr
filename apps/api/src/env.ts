@@ -7,7 +7,10 @@ import { z } from 'zod';
 // possible even on staging/shared dev. Tokens simply don't survive a restart
 // unless JWT_SECRET is set explicitly.
 const EPHEMERAL_JWT_SECRET = randomBytes(32).toString('hex');
-const JWT_SECRET_PROVIDED = Boolean(process.env.JWT_SECRET);
+// An empty or whitespace-only JWT_SECRET (e.g. a copied `.env.example` that
+// leaves it blank) counts as "not provided" so the ephemeral fallback applies
+// rather than failing the min-length check.
+const JWT_SECRET_PROVIDED = Boolean(process.env.JWT_SECRET?.trim());
 
 const envSchema = z
   .object({
@@ -15,7 +18,10 @@ const envSchema = z
     PORT: z.coerce.number().int().default(4000),
     HOST: z.string().default('0.0.0.0'),
     CORS_ORIGINS: z.string().default('http://localhost:5173'),
-    JWT_SECRET: z.string().min(16).default(EPHEMERAL_JWT_SECRET),
+    JWT_SECRET: z.preprocess(
+      (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+      z.string().min(16).default(EPHEMERAL_JWT_SECRET),
+    ),
     JWT_EXPIRES_IN: z.string().default('8h'),
     DATABASE_URL: z.string().default('file:./local.db'),
     DATABASE_AUTH_TOKEN: z.string().optional(),
