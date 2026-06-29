@@ -1,0 +1,31 @@
+{
+  "name": "carrier-hr",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Carrier HR Platform — production-grade HRIS for Carrier Global",
+  "packageManager": "pnpm@9.15.1",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter ./packages/* build && pnpm -r --filter ./apps/* build",
+    "build:shared": "pnpm --filter @carrier-hr/shared build",
+    "dev": "pnpm --parallel --filter ./apps/* dev",
+    "dev:api": "pnpm --filter @carrier-hr/api dev",
+    "dev:web": "pnpm --filter @carrier-hr/web dev",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:generate": "pnpm --filter @carrier-hr/api db:generate",
+    "db:migrate": "pnpm --filter @carrier-hr/api db:migrate",
+    "db:seed": "pnpm --filter @carrier-hr/api db:seed",
+    "db:reset": "pnpm --filter @carrier-hr/api db:reset",
+    "e2e": "pnpm --filter @carrier-hr/web e2e",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,css}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  }
+}
