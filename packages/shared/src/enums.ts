@@ -59,6 +59,33 @@ export const CANDIDATE_STAGES = [
 ] as const;
 export type CandidateStage = (typeof CANDIDATE_STAGES)[number];
 
+/** Active stages a candidate moves through before reaching a terminal stage. */
+export const CANDIDATE_ACTIVE_STAGES = ['applied', 'screening', 'interview', 'offer'] as const;
+export const CANDIDATE_TERMINAL_STAGES = ['hired', 'rejected'] as const;
+
+export const INTERVIEW_MODES = ['onsite', 'phone', 'video', 'panel'] as const;
+export type InterviewMode = (typeof INTERVIEW_MODES)[number];
+
+export const INTERVIEW_STATUSES = ['scheduled', 'completed', 'cancelled', 'no_show'] as const;
+export type InterviewStatus = (typeof INTERVIEW_STATUSES)[number];
+
+export const SCORECARD_RECOMMENDATIONS = [
+  'strong_yes',
+  'yes',
+  'no',
+  'strong_no',
+] as const;
+export type ScorecardRecommendation = (typeof SCORECARD_RECOMMENDATIONS)[number];
+
+export const OFFER_STATUSES = [
+  'draft',
+  'extended',
+  'accepted',
+  'declined',
+  'rescinded',
+] as const;
+export type OfferStatus = (typeof OFFER_STATUSES)[number];
+
 export const ONBOARDING_TASK_STATUSES = ['pending', 'in_progress', 'completed', 'overdue'] as const;
 export type OnboardingTaskStatus = (typeof ONBOARDING_TASK_STATUSES)[number];
 

@@ -115,6 +115,7 @@ const MANAGER_PERMISSIONS: Permission[] = [
   'performance:read:team',
   'performance:review',
   'analytics:read:team',
+  'recruiting:read',
 ];
 
 const RECRUITER_PERMISSIONS: Permission[] = [
