@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 import type { CreateDocumentInput, HrDocument } from '@carrier-hr/shared';
 import type { Database } from '../db/client.js';
 import { documentSignatures, documents } from '../db/schema.js';
-import { Forbidden, NotFound } from '../lib/errors.js';
+import { BadRequest, Forbidden, NotFound } from '../lib/errors.js';
 import { createId } from '../lib/ids.js';
 import { nowIso } from '../lib/dates.js';
 import { toDocument } from './mappers.js';
@@ -82,6 +82,9 @@ export async function sign(db: Database, employeeId: string, id: string): Promis
   if (!row) throw NotFound('Document not found');
   if (row.employeeId && row.employeeId !== employeeId) {
     throw Forbidden('You cannot sign this document');
+  }
+  if (!row.requiresSignature) {
+    throw BadRequest('This document does not require a signature');
   }
   const [existing] = await db
     .select()

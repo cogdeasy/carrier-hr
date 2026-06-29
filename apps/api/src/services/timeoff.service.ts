@@ -157,7 +157,9 @@ export async function decideRequest(
   if (!options.isAdmin && row.approverId !== approverId) {
     throw Forbidden('You are not the approver for this request');
   }
-  if (!options.isAdmin && row.employeeId === approverId) {
+  // Self-approval is forbidden for everyone, including admins: segregation of
+  // duties means even an HR admin cannot decide their own time-off request.
+  if (row.employeeId === approverId) {
     throw Forbidden('You cannot approve your own time-off request');
   }
 

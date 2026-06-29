@@ -30,6 +30,7 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  refresh: () => Promise<void>;
   can: (permission: Permission | string) => boolean;
 }
 
@@ -80,6 +81,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const refresh = useCallback(async () => {
+    const res = await api.get<SessionResponse>('/auth/session');
+    setState({
+      user: res.user,
+      permissions: new Set(res.permissions),
+      status: 'authenticated',
+    });
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.post<LoginResponse>('/auth/login', { email, password });
     setToken(res.token);
@@ -96,8 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AuthContextValue>(
-    () => ({ ...state, login, logout, can }),
-    [state, login, logout, can],
+    () => ({ ...state, login, logout, refresh, can }),
+    [state, login, logout, refresh, can],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

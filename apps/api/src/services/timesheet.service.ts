@@ -133,6 +133,11 @@ export async function decideTimesheet(
   if (!options.isAdmin && row.approverId !== approverId) {
     throw Forbidden('You are not the approver for this timesheet');
   }
+  // Segregation of duties: nobody approves their own timesheet, mirroring the
+  // time-off flow. Applies even to admins.
+  if (row.employeeId === approverId) {
+    throw Forbidden('You cannot approve your own timesheet');
+  }
   await db
     .update(timesheets)
     .set({

@@ -1,5 +1,7 @@
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { authHeader, createTestApp, login, seedUser, type TestContext } from '../test/harness.js';
+import { users } from '../db/schema.js';
 
 describe('auth routes', () => {
   let ctx: TestContext;
@@ -68,5 +70,53 @@ describe('auth routes', () => {
     await expect(login(ctx.app, 'changer@carrier.com', 'NewPassword456!')).resolves.toBeTypeOf(
       'string',
     );
+  });
+
+  it('blocks a user with a pending password change from other routes until they rotate it', async () => {
+    const seeded = await seedUser(ctx.db, { email: 'temp@carrier.com', roles: ['employee'] });
+    await ctx.db
+      .update(users)
+      .set({ mustChangePassword: true })
+      .where(eq(users.id, seeded.userId));
+    const token = await login(ctx.app, 'temp@carrier.com');
+
+    // Any normal route is forbidden while the temporary password stands.
+    const blocked = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/me',
+      headers: authHeader(token),
+    });
+    expect(blocked.statusCode).toBe(403);
+    expect(blocked.json().error.message).toContain('change your password');
+
+    // The session route stays reachable so the client can detect the state.
+    const session = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/auth/session',
+      headers: authHeader(token),
+    });
+    expect(session.statusCode).toBe(200);
+    expect(session.json().user.mustChangePassword).toBe(true);
+
+    // Changing the password clears the flag and unblocks the rest of the app.
+    const changed = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/auth/change-password',
+      headers: authHeader(token),
+      payload: {
+        currentPassword: 'Password123!',
+        newPassword: 'NewPassword456!',
+        confirmPassword: 'NewPassword456!',
+      },
+    });
+    expect(changed.statusCode).toBe(200);
+
+    const newToken = await login(ctx.app, 'temp@carrier.com', 'NewPassword456!');
+    const allowed = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/me',
+      headers: authHeader(newToken),
+    });
+    expect(allowed.statusCode).toBe(200);
   });
 });

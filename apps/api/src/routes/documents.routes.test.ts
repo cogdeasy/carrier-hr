@@ -61,6 +61,30 @@ describe('documents — per-employee signatures', () => {
     expect(bobDoc.signedAt).toBeNull();
   });
 
+  it('rejects signing a document that does not require a signature', async () => {
+    const hr = await seedUser(ctx.db, { email: 'docs.hr2@carrier.com', roles: ['hr_admin'] });
+    const noSignId = createId('doc');
+    await ctx.db.insert(documents).values({
+      id: noSignId,
+      employeeId: null,
+      name: 'Reference Guide',
+      category: 'policy',
+      contentType: 'application/pdf',
+      sizeBytes: 500,
+      url: 'https://files.example/guide.pdf',
+      requiresSignature: false,
+      uploadedById: hr.employeeId,
+    });
+    const aliceToken = await login(ctx.app, 'alice@carrier.com');
+    const res = await ctx.app.inject({
+      method: 'POST',
+      url: `/api/documents/${noSignId}/sign`,
+      headers: authHeader(aliceToken),
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toContain('does not require a signature');
+  });
+
   it('is idempotent when the same employee signs twice', async () => {
     const aliceToken = await login(ctx.app, 'alice@carrier.com');
     const first = await ctx.app.inject({

@@ -1,7 +1,13 @@
 import 'dotenv/config';
+import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 
-const DEFAULT_JWT_SECRET = 'dev-only-insecure-secret-change-me';
+// Non-production deployments that omit JWT_SECRET get a fresh random secret per
+// process instead of a publicly-known constant, so forged tokens are never
+// possible even on staging/shared dev. Tokens simply don't survive a restart
+// unless JWT_SECRET is set explicitly.
+const EPHEMERAL_JWT_SECRET = randomBytes(32).toString('hex');
+const JWT_SECRET_PROVIDED = Boolean(process.env.JWT_SECRET);
 
 const envSchema = z
   .object({
@@ -9,14 +15,14 @@ const envSchema = z
     PORT: z.coerce.number().int().default(4000),
     HOST: z.string().default('0.0.0.0'),
     CORS_ORIGINS: z.string().default('http://localhost:5173'),
-    JWT_SECRET: z.string().min(16).default(DEFAULT_JWT_SECRET),
+    JWT_SECRET: z.string().min(16).default(EPHEMERAL_JWT_SECRET),
     JWT_EXPIRES_IN: z.string().default('8h'),
     DATABASE_URL: z.string().default('file:./local.db'),
     DATABASE_AUTH_TOKEN: z.string().optional(),
     SEED_DEFAULT_PASSWORD: z.string().default('Password123!'),
   })
   .superRefine((env, ctx) => {
-    if (env.NODE_ENV === 'production' && env.JWT_SECRET === DEFAULT_JWT_SECRET) {
+    if (env.NODE_ENV === 'production' && !JWT_SECRET_PROVIDED) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['JWT_SECRET'],
@@ -49,10 +55,11 @@ export function getEnv(): Env {
     throw new Error('Invalid environment configuration');
   }
   cached = parsed.data;
-  if (cached.NODE_ENV !== 'production' && cached.JWT_SECRET === DEFAULT_JWT_SECRET) {
+  if (cached.NODE_ENV !== 'production' && !JWT_SECRET_PROVIDED) {
     console.warn(
-      `[env] WARNING: using the built-in development JWT secret (NODE_ENV=${cached.NODE_ENV}). ` +
-        'Set JWT_SECRET to a strong, unique value before exposing this server to any network.',
+      `[env] WARNING: JWT_SECRET is not set (NODE_ENV=${cached.NODE_ENV}); using an ephemeral ` +
+        'random secret for this process. Sessions will be invalidated on restart. ' +
+        'Set JWT_SECRET to a strong, unique value for stable sessions and before exposing this server to any network.',
     );
   }
   return cached;

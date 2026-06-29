@@ -12,10 +12,13 @@ import { api } from '../lib/api';
 import { formatDate, titleCase } from '../lib/format';
 
 function mondayOf(date: Date): string {
+  // Compute the week start in UTC. Date inputs yield UTC-midnight instants, so
+  // using local-timezone accessors here would land a day (and week) early for
+  // users behind UTC. UTC accessors keep the picked day stable everywhere.
   const d = new Date(date);
-  const day = d.getDay();
+  const day = d.getUTCDay();
   const diff = (day === 0 ? -6 : 1) - day;
-  d.setDate(d.getDate() + diff);
+  d.setUTCDate(d.getUTCDate() + diff);
   return d.toISOString().slice(0, 10);
 }
 
