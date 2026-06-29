@@ -452,19 +452,24 @@ export async function getTeamDashboard(
       .orderBy(timeOffRequests.startDate)
       .limit(10),
     db
-      .select({ courseId: courseEnrollments.courseId, status: courseEnrollments.status })
+      .select({
+        employeeId: courseEnrollments.employeeId,
+        courseId: courseEnrollments.courseId,
+        status: courseEnrollments.status,
+      })
       .from(courseEnrollments)
       .where(inArray(courseEnrollments.employeeId, reportIds)),
     db.select({ id: courses.id }).from(courses).where(eq(courses.required, true)),
   ]);
 
   const goalMap = new Map(goalRows.map((r) => [r.status, Number(r.count)]));
-  const activeMembers = reports.filter((r) => r.status === 'active').length;
+  const activeIds = new Set(reports.filter((r) => r.status === 'active').map((r) => r.id));
+  const activeMembers = activeIds.size;
   const onLeave = reports.filter((r) => r.status === 'on_leave').length;
 
   const requiredIds = new Set(requiredCourses.map((c) => c.id));
   const completedRequired = enrollmentRows.filter(
-    (e) => e.status === 'completed' && requiredIds.has(e.courseId),
+    (e) => e.status === 'completed' && requiredIds.has(e.courseId) && activeIds.has(e.employeeId),
   ).length;
   const complianceDenominator = requiredIds.size * activeMembers;
   const trainingComplianceRate =

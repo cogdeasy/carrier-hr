@@ -331,6 +331,18 @@ describe('analytics: team dashboard scoping', () => {
       weekStarting: '2026-06-01',
       status: 'submitted',
     });
+    const reqA = createId('crs');
+    const reqB = createId('crs');
+    await ctx.db.insert(courses).values([
+      { id: reqA, title: 'Ethics', category: 'compliance', description: 'x', required: true },
+      { id: reqB, title: 'Safety', category: 'compliance', description: 'x', required: true },
+    ]);
+    await ctx.db.insert(courseEnrollments).values([
+      { id: createId('enr'), employeeId: r1, courseId: reqA, status: 'completed' },
+      { id: createId('enr'), employeeId: r1, courseId: reqB, status: 'in_progress' },
+      { id: createId('enr'), employeeId: r2, courseId: reqA, status: 'completed' },
+      { id: createId('enr'), employeeId: r2, courseId: reqB, status: 'completed' },
+    ]);
   });
 
   afterAll(async () => {
@@ -355,6 +367,8 @@ describe('analytics: team dashboard scoping', () => {
     expect(body.pendingTimeOff).toBe(1);
     expect(body.pendingTimesheets).toBe(1);
     expect(body.upcomingTimeOff).toHaveLength(1);
+    // on-leave member completions are excluded; 1 of 2 required done by the lone active report.
+    expect(body.trainingComplianceRate).toBe(50);
   });
 
   it('forbids employees without team analytics permission', async () => {
