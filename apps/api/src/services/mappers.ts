@@ -276,7 +276,10 @@ export function toCourseEnrollment(
   };
 }
 
-export function toDocument(row: InferSelectModel<typeof schema.documents>): HrDocument {
+export function toDocument(
+  row: InferSelectModel<typeof schema.documents>,
+  signedAt: string | null = row.signedAt,
+): HrDocument {
   return {
     id: row.id,
     employeeId: row.employeeId,
@@ -286,7 +289,7 @@ export function toDocument(row: InferSelectModel<typeof schema.documents>): HrDo
     sizeBytes: row.sizeBytes,
     url: row.url,
     requiresSignature: row.requiresSignature,
-    signedAt: row.signedAt,
+    signedAt,
     uploadedById: row.uploadedById,
     createdAt: row.createdAt,
   };

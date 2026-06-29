@@ -478,6 +478,28 @@ export const documents = sqliteTable(
   }),
 );
 
+// Per-employee signatures. Company-wide documents (employeeId null on the
+// document) are signed independently by each employee, so signature state
+// cannot live on the shared document row.
+export const documentSignatures = sqliteTable(
+  'document_signatures',
+  {
+    id: text('id').primaryKey(),
+    documentId: text('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    signedAt: text('signed_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  (t) => ({
+    uniqueSignature: uniqueIndex('document_signatures_doc_emp_idx').on(t.documentId, t.employeeId),
+  }),
+);
+
 // ---------------------------------------------------------------------------
 // Notifications & audit
 // ---------------------------------------------------------------------------

@@ -101,6 +101,9 @@ export async function submitTimesheet(
   const [row] = await db.select().from(timesheets).where(eq(timesheets.id, id)).limit(1);
   if (!row) throw NotFound('Timesheet not found');
   if (row.employeeId !== employeeId) throw Forbidden('You can only submit your own timesheet');
+  if (row.status !== 'draft' && row.status !== 'rejected') {
+    throw BadRequest('Only draft or rejected timesheets can be submitted');
+  }
   await db
     .update(timesheets)
     .set({ status: 'submitted', approverId, submittedAt: nowIso(), updatedAt: nowIso() })

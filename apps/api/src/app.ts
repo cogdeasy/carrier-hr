@@ -33,16 +33,14 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     credentials: true,
   });
 
-  // Rate limiting protects against brute-force and abuse. Disabled under test
-  // to keep the suite deterministic; per-route stricter limits live on the
-  // auth endpoints (see auth.routes.ts).
-  if (env.NODE_ENV !== 'test') {
-    await app.register(rateLimit, {
-      global: true,
-      max: 300,
-      timeWindow: '1 minute',
-    });
-  }
+  // Rate limiting protects against brute-force and abuse. Registered in every
+  // environment so a test/staging config can never silently ship without it;
+  // per-route stricter limits live on the auth endpoints (see auth.routes.ts).
+  await app.register(rateLimit, {
+    global: true,
+    max: 300,
+    timeWindow: '1 minute',
+  });
 
   await app.register(authPlugin);
 

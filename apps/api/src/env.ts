@@ -23,6 +23,18 @@ const envSchema = z
         message: 'JWT_SECRET must be set to a strong, unique value in production',
       });
     }
+    if (env.NODE_ENV === 'production') {
+      const origins = env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean);
+      const invalid = origins.filter((o) => o === '*' || !/^https:\/\//.test(o));
+      if (origins.length === 0 || invalid.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['CORS_ORIGINS'],
+          message:
+            'CORS_ORIGINS must be a non-empty list of explicit https:// origins in production (no "*" wildcard)',
+        });
+      }
+    }
   });
 
 export type Env = z.infer<typeof envSchema>;
