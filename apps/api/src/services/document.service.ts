@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import type {
   CreateDocumentInput,
   CreateDocumentVersionInput,
@@ -99,15 +99,6 @@ async function signatureSummaries(
   }
   if (ids.length === 0) return summaries;
 
-  const sigRows = await db
-    .select({ documentId: documentSignatures.documentId })
-    .from(documentSignatures)
-    .where(inArray(documentSignatures.documentId, ids));
-  for (const s of sigRows) {
-    const summary = summaries.get(s.documentId);
-    if (summary) summary.signed += 1;
-  }
-
   const reqRows = await db
     .select({ documentId: signatureRequests.documentId, status: signatureRequests.status })
     .from(signatureRequests)
@@ -119,6 +110,7 @@ async function signatureSummaries(
     summary.total += 1;
     if (req.status === 'pending') summary.pending += 1;
     else if (req.status === 'declined') summary.declined += 1;
+    else if (req.status === 'signed') summary.signed += 1;
   }
   return summaries;
 }
@@ -143,7 +135,10 @@ export async function listDocuments(
   if (query.requiresSignature !== undefined) {
     filters.push(eq(documents.requiresSignature, query.requiresSignature));
   }
-  if (query.q) filters.push(like(documents.name, `%${query.q}%`));
+  if (query.q) {
+    const term = query.q.replace(/[\\%_]/g, (c) => `\\${c}`);
+    filters.push(sql`${documents.name} like ${`%${term}%`} escape '\\'`);
+  }
 
   const where = filters.length ? and(...filters) : undefined;
 
@@ -408,7 +403,10 @@ export async function declineSignature(
   id: string,
   reason: string,
 ): Promise<SignatureRequest> {
-  await loadDocument(db, id);
+  const doc = await loadDocument(db, id);
+  if (!canView({ employeeId, isAdmin: false }, doc)) {
+    throw Forbidden('You cannot access this document');
+  }
   const [request] = await db
     .select()
     .from(signatureRequests)

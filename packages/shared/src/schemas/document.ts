@@ -146,7 +146,10 @@ export const listDocumentsQuerySchema = z.object({
   category: CATEGORY.optional(),
   visibility: z.enum(DOCUMENT_VISIBILITIES).optional(),
   status: z.enum(DOCUMENT_STATUSES).optional(),
-  requiresSignature: z.coerce.boolean().optional(),
+  requiresSignature: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
   employeeId: z.string().optional(),
   q: z.string().trim().max(200).optional(),
   sort: z.enum(['createdAt', 'name', 'category']).default('createdAt'),
