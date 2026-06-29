@@ -1,4 +1,4 @@
-import { COVERAGE_TIERS, type CoverageTier, type Role } from '@collins-hr/shared';
+import { COVERAGE_TIERS, type CoverageTier, type NotificationType, type Role } from '@collins-hr/shared';
 import { getEnv } from '../env.js';
 import { hashPassword } from '../auth/password.js';
 import { businessDaysBetween } from '../lib/dates.js';
@@ -724,6 +724,71 @@ async function seedSupporting(db: Database): Promise<void> {
     link: '/time-off/approvals',
     read: false,
   });
+
+  const daysAgoIso = (days: number): string =>
+    new Date(Date.now() - days * 86_400_000).toISOString();
+
+  const empFeed: {
+    type: NotificationType;
+    title: string;
+    body: string;
+    link: string | null;
+    read: boolean;
+    days: number;
+  }[] = [
+    {
+      type: 'timeoff_decision',
+      title: 'Time-off request approved',
+      body: 'Your vacation request for July 14–18 was approved.',
+      link: '/time-off',
+      read: false,
+      days: 0,
+    },
+    {
+      type: 'timesheet_reminder',
+      title: 'Submit your timesheet',
+      body: 'Your timesheet for this week is due Friday at 5:00 PM.',
+      link: '/timesheets',
+      read: false,
+      days: 1,
+    },
+    {
+      type: 'review_assigned',
+      title: 'Self-review assigned',
+      body: 'Complete your self-assessment for the mid-year review cycle.',
+      link: '/performance',
+      read: true,
+      days: 3,
+    },
+    {
+      type: 'document_request',
+      title: 'Signature required',
+      body: 'Please review and sign the updated Code of Conduct.',
+      link: '/documents',
+      read: true,
+      days: 9,
+    },
+    {
+      type: 'onboarding_task',
+      title: 'Onboarding task due',
+      body: 'Set up your direct deposit to complete onboarding.',
+      link: '/onboarding',
+      read: true,
+      days: 20,
+    },
+  ];
+  for (const n of empFeed) {
+    await db.insert(t.notifications).values({
+      id: createId('ntf'),
+      employeeId: emp.id,
+      type: n.type,
+      title: n.title,
+      body: n.body,
+      link: n.link,
+      read: n.read,
+      createdAt: daysAgoIso(n.days),
+    });
+  }
 }
 
 async function main(): Promise<void> {
