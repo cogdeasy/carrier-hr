@@ -243,6 +243,7 @@ export async function generatePayRun(
     );
     const missing = input.employeeIds.filter((id) => !valid.has(id));
     if (missing.length) throw NotFound(`Unknown employee(s): ${missing.join(', ')}`);
+    // Explicit selection is honored regardless of status (e.g. final pay for a terminated employee).
     targetIds = input.employeeIds.filter((id) => latestComp.has(id));
   } else {
     // Blanket run: only currently-active employees with a compensation record.
@@ -431,8 +432,10 @@ export async function markPayRunPaid(db: Database, id: string): Promise<PayRunDe
   const [row] = await db.select().from(payRuns).where(eq(payRuns.id, id)).limit(1);
   if (!row) throw NotFound('Pay run not found');
   if (row.status !== 'paid') {
-    await db.update(payslips).set({ status: 'paid' }).where(eq(payslips.payRunId, id));
-    await db.update(payRuns).set({ status: 'paid' }).where(eq(payRuns.id, id));
+    await db.batch([
+      db.update(payslips).set({ status: 'paid' }).where(eq(payslips.payRunId, id)),
+      db.update(payRuns).set({ status: 'paid' }).where(eq(payRuns.id, id)),
+    ]);
   }
   return getPayRun(db, id);
 }
