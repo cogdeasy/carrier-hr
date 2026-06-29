@@ -4,6 +4,7 @@ import type {
   CreateGoalInput,
   CreateOneOnOneInput,
   CreateReviewCycleInput,
+  EmployeeRef,
   EnrollReviewCycleInput,
   Goal,
   GoalQuery,
@@ -413,6 +414,18 @@ async function hydrateOneOnOnes(
       actionItems: itemsByMeeting.get(r.id) ?? [],
     }),
   );
+}
+
+// Lightweight refs (id/name/title) for the manager's direct reports — used by
+// the 1:1 scheduling picker. Deliberately avoids returning full Employee records
+// (phone, address, DOB, emergency contacts) to callers that only need a label.
+export async function listDirectReportRefs(db: Database, managerId: string): Promise<EmployeeRef[]> {
+  const rows = await db
+    .select()
+    .from(employees)
+    .where(eq(employees.managerId, managerId))
+    .orderBy(employees.lastName);
+  return rows.map(toEmployeeRef);
 }
 
 export async function listOneOnOnes(db: Database, employeeId: string): Promise<OneOnOne[]> {

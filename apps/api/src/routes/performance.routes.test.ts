@@ -499,6 +499,26 @@ describe('1:1 meetings', () => {
     expect(id).toBeTruthy();
   });
 
+  it('returns lightweight report refs without leaking PII', async () => {
+    const mgrToken = await authToken(ctx.app, 'omgr@collins.com');
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/performance/direct-reports',
+      headers: authHeader(mgrToken),
+    });
+    expect(res.statusCode).toBe(200);
+    const reports = res.json() as Record<string, unknown>[];
+    expect(reports.length).toBeGreaterThan(0);
+    for (const r of reports) {
+      expect(r).toHaveProperty('id');
+      expect(r).toHaveProperty('displayName');
+      expect(r).not.toHaveProperty('personalPhone');
+      expect(r).not.toHaveProperty('dateOfBirth');
+      expect(r).not.toHaveProperty('address');
+      expect(r).not.toHaveProperty('emergencyContact');
+    }
+  });
+
   it('forbids scheduling a 1:1 with a non-report', async () => {
     const mgrToken = await authToken(ctx.app, 'omgr@collins.com');
     const res = await ctx.app.inject({

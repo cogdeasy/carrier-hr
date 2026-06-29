@@ -30,6 +30,7 @@ import {
   getOneOnOne,
   getReview,
   listCycles,
+  listDirectReportRefs,
   listGoals,
   listOneOnOnes,
   listReviews,
@@ -194,7 +195,7 @@ export async function performanceRoutes(app: FastifyInstance): Promise<void> {
 
   // Direct reports of the current user, used to populate goal scoping and the
   // 1:1 scheduling picker (managers lack the broader `employee:read` permission).
-  app.get('/direct-reports', async (req) => listDirectReports(app.db, req.principal.employeeId));
+  app.get('/direct-reports', async (req) => listDirectReportRefs(app.db, req.principal.employeeId));
 
   app.get('/one-on-ones', async (req) => listOneOnOnes(app.db, req.principal.employeeId));
 
