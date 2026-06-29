@@ -135,7 +135,7 @@ export async function recruitingRoutes(app: FastifyInstance): Promise<void> {
   app.post('/interviews/:id/scorecard', write, async (req, reply) => {
     const { id } = parse(idParam, req.params);
     const input = parse(submitScorecardSchema, req.body);
-    const scorecard = await submitScorecard(app.db, id, req.principal.employeeId, input, actor(req));
+    const scorecard = await submitScorecard(app.db, id, input, actor(req));
     return reply.status(201).send(scorecard);
   });
 

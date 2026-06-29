@@ -406,6 +406,9 @@ export async function createCandidate(
   actor: RecruitingActor,
 ): Promise<Candidate> {
   const job = await loadJob(db, input.jobId);
+  if (job.status === 'draft') {
+    throw BadRequest('Approve the requisition to post before adding candidates');
+  }
   if (job.status === 'closed' || job.status === 'filled') {
     throw BadRequest('Cannot apply to a closed or filled requisition');
   }
@@ -678,7 +681,6 @@ export async function updateInterview(
 export async function submitScorecard(
   db: Database,
   interviewId: string,
-  interviewerId: string,
   input: SubmitScorecardInput,
   actor: RecruitingActor,
 ): Promise<Scorecard> {
@@ -696,6 +698,7 @@ export async function submitScorecard(
     .limit(1);
   if (existing) throw Conflict('A scorecard has already been submitted for this interview');
 
+  const interviewerId = interview.interviewerId;
   const id = createId('scr');
   await db.insert(interviewScorecards).values({
     id,

@@ -163,6 +163,17 @@ describe('recruiting / ATS', () => {
     expect(closedApply.statusCode).toBe(400);
   });
 
+  it('blocks adding candidates to a draft requisition', async () => {
+    const jobId = await createJob();
+    const res = await post('/api/recruiting/candidates', recruiterToken, {
+      jobId,
+      firstName: 'Early',
+      lastName: 'Applicant',
+      email: 'early@example.com',
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   // --- Pipeline state machine ----------------------------------------------
 
   it('walks the pipeline applied -> screening -> interview -> offer and records history', async () => {
@@ -234,6 +245,7 @@ describe('recruiting / ATS', () => {
       strengths: 'Great communicator',
     });
     expect(score.statusCode).toBe(201);
+    expect(score.json().interviewerId).toBe(interviewer.employeeId);
 
     const dup = await post(`/api/recruiting/interviews/${interviewId}/scorecard`, recruiterToken, {
       rating: 2,
@@ -244,6 +256,7 @@ describe('recruiting / ATS', () => {
     const detail = await get(`/api/recruiting/candidates/${candId}`, recruiterToken);
     expect(detail.json().interviews[0].status).toBe('completed');
     expect(detail.json().interviews[0].scorecard.recommendation).toBe('yes');
+    expect(detail.json().interviews[0].scorecard.interviewerId).toBe(interviewer.employeeId);
   });
 
   // --- Offers & hiring ------------------------------------------------------
