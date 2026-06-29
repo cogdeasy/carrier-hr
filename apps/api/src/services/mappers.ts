@@ -375,19 +375,26 @@ export function toCourseEnrollment(
 export function toDocument(
   row: InferSelectModel<typeof schema.documents>,
   signedAt: string | null = row.signedAt,
+  signatures?: HrDocument['signatures'],
 ): HrDocument {
   return {
     id: row.id,
     employeeId: row.employeeId,
+    visibility: row.employeeId ? 'personal' : 'company',
     name: row.name,
+    description: row.description,
     category: row.category,
     contentType: row.contentType,
     sizeBytes: row.sizeBytes,
     url: row.url,
+    version: row.version,
+    status: row.status as HrDocument['status'],
     requiresSignature: row.requiresSignature,
     signedAt,
+    signatures,
     uploadedById: row.uploadedById,
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 

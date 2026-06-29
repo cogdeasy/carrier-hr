@@ -557,10 +557,13 @@ export const documents = sqliteTable(
     id: text('id').primaryKey(),
     employeeId: text('employee_id').references(() => employees.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
+    description: text('description'),
     category: text('category').notNull().default('general'),
     contentType: text('content_type').notNull(),
     sizeBytes: integer('size_bytes').notNull().default(0),
     url: text('url').notNull(),
+    version: integer('version').notNull().default(1),
+    status: text('status').notNull().default('active'),
     requiresSignature: integer('requires_signature', { mode: 'boolean' }).notNull().default(false),
     signedAt: text('signed_at'),
     uploadedById: text('uploaded_by_id')
@@ -569,9 +572,79 @@ export const documents = sqliteTable(
     createdAt: text('created_at')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
   },
   (t) => ({
     employeeIdx: index('documents_employee_idx').on(t.employeeId),
+    categoryIdx: index('documents_category_idx').on(t.category),
+    statusIdx: index('documents_status_idx').on(t.status),
+  }),
+);
+
+// Immutable revision history for a document. Each uploaded revision is appended
+// here so prior files remain auditable after the live `documents` row advances.
+export const documentVersions = sqliteTable(
+  'document_versions',
+  {
+    id: text('id').primaryKey(),
+    documentId: text('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    contentType: text('content_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull().default(0),
+    url: text('url').notNull(),
+    note: text('note'),
+    uploadedById: text('uploaded_by_id')
+      .notNull()
+      .references(() => employees.id),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  (t) => ({
+    documentIdx: index('document_versions_document_idx').on(t.documentId),
+    uniqueVersion: uniqueIndex('document_versions_doc_version_idx').on(t.documentId, t.version),
+  }),
+);
+
+// Tracked e-signature requests: one row per (document, target employee). The
+// row carries the request lifecycle (pending -> signed/declined/cancelled);
+// the immutable signature itself is recorded in `documentSignatures`.
+export const signatureRequests = sqliteTable(
+  'signature_requests',
+  {
+    id: text('id').primaryKey(),
+    documentId: text('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    requestedById: text('requested_by_id')
+      .notNull()
+      .references(() => employees.id),
+    status: text('status').notNull().default('pending'),
+    message: text('message'),
+    dueDate: text('due_date'),
+    signedAt: text('signed_at'),
+    declinedAt: text('declined_at'),
+    declineReason: text('decline_reason'),
+    remindersSent: integer('reminders_sent').notNull().default(0),
+    lastReminderAt: text('last_reminder_at'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  (t) => ({
+    documentIdx: index('signature_requests_document_idx').on(t.documentId),
+    employeeIdx: index('signature_requests_employee_idx').on(t.employeeId),
+    uniqueRequest: uniqueIndex('signature_requests_doc_emp_idx').on(t.documentId, t.employeeId),
   }),
 );
 

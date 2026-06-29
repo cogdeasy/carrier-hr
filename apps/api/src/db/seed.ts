@@ -560,17 +560,71 @@ async function seedSupporting(db: Database): Promise<void> {
     }
   }
 
-  // Documents (company-wide + personal)
-  await db.insert(t.documents).values({
+  // Documents (company-wide + personal) and a tracked signature request.
+  const hrAdminId = employees.find((e) => e.email === 'hr.admin@collins.com')!.id;
+  const demoEmployeeId = employees.find((e) => e.email === 'employee@collins.com')!.id;
+
+  const codeOfConduct = {
     id: createId('doc'),
     employeeId: null,
-    name: 'Employee Handbook 2026.pdf',
-    category: 'Policy',
+    name: 'Code of Conduct.pdf',
+    description: 'Acknowledgement required from every employee.',
+    category: 'policy',
     contentType: 'application/pdf',
-    sizeBytes: 2_400_000,
-    url: 'https://files.collins.example/handbook-2026.pdf',
+    sizeBytes: 540_000,
+    url: 'https://files.collins.example/code-of-conduct.pdf',
     requiresSignature: true,
-    uploadedById: employees.find((e) => e.email === 'hr.admin@collins.com')!.id,
+    uploadedById: hrAdminId,
+  };
+  const seedDocs = [
+    {
+      id: createId('doc'),
+      employeeId: null,
+      name: 'Employee Handbook 2026.pdf',
+      description: 'Company-wide policies, benefits overview, and code of conduct.',
+      category: 'handbook',
+      contentType: 'application/pdf',
+      sizeBytes: 2_400_000,
+      url: 'https://files.collins.example/handbook-2026.pdf',
+      requiresSignature: true,
+      uploadedById: hrAdminId,
+    },
+    codeOfConduct,
+    {
+      id: createId('doc'),
+      employeeId: demoEmployeeId,
+      name: 'Offer Letter.pdf',
+      description: 'Signed offer of employment.',
+      category: 'contract',
+      contentType: 'application/pdf',
+      sizeBytes: 180_000,
+      url: 'https://files.collins.example/offer-letter.pdf',
+      requiresSignature: false,
+      uploadedById: hrAdminId,
+    },
+  ];
+  for (const doc of seedDocs) {
+    await db.insert(t.documents).values(doc);
+    await db.insert(t.documentVersions).values({
+      id: createId('dvr'),
+      documentId: doc.id,
+      version: 1,
+      contentType: doc.contentType,
+      sizeBytes: doc.sizeBytes,
+      url: doc.url,
+      note: 'Initial version',
+      uploadedById: doc.uploadedById,
+    });
+  }
+
+  // A pending signature request so the "awaiting my signature" inbox has data.
+  await db.insert(t.signatureRequests).values({
+    id: createId('sgr'),
+    documentId: codeOfConduct.id,
+    employeeId: demoEmployeeId,
+    requestedById: hrAdminId,
+    status: 'pending',
+    message: 'Please acknowledge the 2026 Code of Conduct.',
   });
 
   // Notifications for the demo employee + manager
