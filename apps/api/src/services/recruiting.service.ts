@@ -323,6 +323,9 @@ export async function updateJob(
   if (salaryMinCents !== null && salaryMaxCents !== null && salaryMaxCents < salaryMinCents) {
     throw BadRequest('Maximum salary must be greater than or equal to minimum salary');
   }
+  const openings = input.openings ?? row.openings;
+  const nowFilled =
+    (row.status === 'open' || row.status === 'on_hold') && row.filledCount >= openings;
   await db
     .update(jobRequisitions)
     .set({
@@ -335,9 +338,11 @@ export async function updateJob(
       hiringManagerId:
         input.hiringManagerId === undefined ? row.hiringManagerId : input.hiringManagerId,
       recruiterId: input.recruiterId === undefined ? row.recruiterId : input.recruiterId,
-      openings: input.openings ?? row.openings,
+      openings,
       salaryMinCents,
       salaryMaxCents,
+      status: nowFilled ? 'filled' : row.status,
+      closedAt: nowFilled ? nowIso() : row.closedAt,
       updatedAt: nowIso(),
     })
     .where(eq(jobRequisitions.id, id));
@@ -532,6 +537,9 @@ async function assertHireable(db: Database, candidate: CandidateRow): Promise<vo
     .limit(1);
   if (!offer) throw BadRequest('Candidate must have an accepted offer before being hired');
   const job = await loadJob(db, candidate.jobId);
+  if (job.status === 'closed' || job.status === 'filled') {
+    throw BadRequest('Cannot hire for a closed or filled requisition');
+  }
   if (job.filledCount >= job.openings) {
     throw Conflict('All openings for this requisition are already filled');
   }

@@ -85,6 +85,22 @@ describe('recruiting / ATS', () => {
     expect(res.json().status).toBe('open');
   }
 
+  async function readyToHire(jobId: string, email: string): Promise<string> {
+    const candId = await addCandidate(jobId, email);
+    for (const stage of ['screening', 'interview', 'offer']) {
+      await post(`/api/recruiting/candidates/${candId}/stage`, recruiterToken, { stage });
+    }
+    const offer = await post('/api/recruiting/offers', recruiterToken, {
+      candidateId: candId,
+      salaryCents: 14000000,
+      startDate: '2026-08-01',
+    });
+    const offerId = offer.json().id as string;
+    await post(`/api/recruiting/offers/${offerId}/action`, recruiterToken, { action: 'extend' });
+    await post(`/api/recruiting/offers/${offerId}/action`, recruiterToken, { action: 'accept' });
+    return candId;
+  }
+
   // --- Requisition lifecycle ------------------------------------------------
 
   it('creates requisitions as drafts and only HR can approve to post', async () => {
@@ -316,6 +332,47 @@ describe('recruiting / ATS', () => {
     const job = await get(`/api/recruiting/jobs/${jobId}`, recruiterToken);
     expect(job.json().status).toBe('filled');
     expect(job.json().filledCount).toBe(1);
+  });
+
+  it('refuses to hire onto a manually closed requisition', async () => {
+    const jobId = await createJob({ openings: 1 });
+    await approveAndOpen(jobId);
+    const candId = await readyToHire(jobId, 'closed-hire@example.com');
+
+    const closed = await post(`/api/recruiting/jobs/${jobId}/status`, recruiterToken, {
+      status: 'closed',
+    });
+    expect(closed.json().status).toBe('closed');
+
+    const hire = await post(`/api/recruiting/candidates/${candId}/stage`, recruiterToken, {
+      stage: 'hired',
+    });
+    expect(hire.statusCode).toBe(400);
+
+    const job = await get(`/api/recruiting/jobs/${jobId}`, recruiterToken);
+    expect(job.json().status).toBe('closed');
+  });
+
+  it('auto-fills a requisition when openings are reduced to the filled count', async () => {
+    const jobId = await createJob({ openings: 2 });
+    await approveAndOpen(jobId);
+    const candId = await readyToHire(jobId, 'reduce@example.com');
+    const hire = await post(`/api/recruiting/candidates/${candId}/stage`, recruiterToken, {
+      stage: 'hired',
+    });
+    expect(hire.statusCode).toBe(200);
+
+    const stillOpen = await get(`/api/recruiting/jobs/${jobId}`, recruiterToken);
+    expect(stillOpen.json().status).toBe('open');
+
+    const patched = await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/recruiting/jobs/${jobId}`,
+      headers: authHeader(recruiterToken),
+      payload: { openings: 1 },
+    });
+    expect(patched.statusCode).toBe(200);
+    expect(patched.json().status).toBe('filled');
   });
 
   // --- Authorization & scoping ---------------------------------------------
