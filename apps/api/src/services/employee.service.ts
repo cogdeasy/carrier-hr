@@ -287,7 +287,8 @@ export async function updateEmployee(
 }
 
 /** Terminates or places an employee on leave, recording the effective date.
- * Idempotent guards prevent re-terminating an already inactive record. */
+ * Re-terminating an already-terminated record is rejected; on-leave dates may
+ * still be updated or transitioned to terminated. */
 export async function terminateEmployee(
   db: Database,
   id: string,
