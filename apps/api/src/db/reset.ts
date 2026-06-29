@@ -1,6 +1,7 @@
 import { getClient } from './client.js';
 
 const TABLES = [
+  'org_settings',
   'audit_logs',
   'notifications',
   'document_signatures',

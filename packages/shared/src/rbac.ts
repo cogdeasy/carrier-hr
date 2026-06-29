@@ -69,7 +69,9 @@ export const PERMISSIONS = [
   'onboarding:admin',
   // Learning
   'learning:read:own',
+  'learning:read:team',
   'learning:enroll',
+  'learning:assign',
   'learning:admin',
   // Documents
   'document:read:own',
@@ -115,6 +117,9 @@ const MANAGER_PERMISSIONS: Permission[] = [
   'performance:read:team',
   'performance:review',
   'analytics:read:team',
+  'learning:read:team',
+  'learning:assign',
+  'recruiting:read',
 ];
 
 const RECRUITER_PERMISSIONS: Permission[] = [

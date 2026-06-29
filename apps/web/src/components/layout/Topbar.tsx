@@ -1,22 +1,14 @@
-import type { Notification } from '@collins-hr/shared';
-import { useQuery } from '@tanstack/react-query';
-import { Bell, LogOut, Menu } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
-import { api } from '../../lib/api';
 import { Avatar } from '../ui/Avatar';
+import { NotificationBell } from './NotificationBell';
 
 export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-
-  const { data: notifications = [] } = useQuery({
-    queryKey: ['notifications', 'unread'],
-    queryFn: () => api.get<Notification[]>('/notifications', { unread: true }),
-    refetchInterval: 60_000,
-  });
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
@@ -29,18 +21,7 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
       </button>
       <div className="hidden lg:block" />
       <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate('/notifications')}
-          className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5" />
-          {notifications.length > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-              {notifications.length}
-            </span>
-          ) : null}
-        </button>
+        <NotificationBell />
         <div className="relative">
           <button
             onClick={() => setMenuOpen((o) => !o)}

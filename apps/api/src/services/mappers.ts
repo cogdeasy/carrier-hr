@@ -1,9 +1,14 @@
 import type {
   Address,
   BenefitEnrollment,
+  BenefitPlan,
+  BenefitPlanTier,
+  CoverageState,
+  CoverageTier,
   Candidate,
   Course,
   CourseEnrollment,
+  CourseRef,
   Employee,
   EmployeeRef,
   EmergencyContact,
@@ -12,6 +17,9 @@ import type {
   JobRequisition,
   Notification,
   OnboardingTask,
+  OneOnOne,
+  OneOnOneActionItem,
+  PayRun,
   Payslip,
   PayslipLine,
   Review,
@@ -21,6 +29,7 @@ import type {
   Timesheet,
   TimesheetEntry,
 } from '@collins-hr/shared';
+import { splitOvertime } from '@collins-hr/shared';
 import type { InferSelectModel } from 'drizzle-orm';
 import type * as schema from '../db/schema.js';
 
@@ -94,6 +103,7 @@ export function toTimeOffRequest(
     endDate: row.endDate,
     totalDays: row.totalDays,
     reason: row.reason,
+    attachmentUrl: row.attachmentUrl,
     status: row.status as TimeOffRequest['status'],
     approverId: row.approverId,
     approver: relations.approver ?? undefined,
@@ -107,22 +117,30 @@ export function toTimeOffRequest(
 export function toTimesheet(
   row: InferSelectModel<typeof schema.timesheets>,
   entries: InferSelectModel<typeof schema.timesheetEntries>[],
+  relations: { employee?: EmployeeRef; approver?: EmployeeRef | null } = {},
 ): Timesheet {
   const mapped: TimesheetEntry[] = entries.map((e) => ({
     id: e.id,
     date: e.date,
     project: e.project,
+    task: e.task,
     hours: e.hours,
     notes: e.notes,
   }));
+  const totalHours = mapped.reduce((sum, e) => sum + e.hours, 0);
+  const { regularHours, overtimeHours } = splitOvertime(totalHours);
   return {
     id: row.id,
     employeeId: row.employeeId,
+    employee: relations.employee,
     weekStarting: row.weekStarting,
     status: row.status as Timesheet['status'],
-    totalHours: mapped.reduce((sum, e) => sum + e.hours, 0),
+    totalHours,
+    regularHours,
+    overtimeHours,
     entries: mapped,
     approverId: row.approverId,
+    approver: relations.approver ?? undefined,
     submittedAt: row.submittedAt,
     decidedAt: row.decidedAt,
     decisionNote: row.decisionNote,
@@ -131,7 +149,10 @@ export function toTimesheet(
   };
 }
 
-export function toPayslip(row: InferSelectModel<typeof schema.payslips>): Payslip {
+export function toPayslip(
+  row: InferSelectModel<typeof schema.payslips>,
+  relations: { employee?: EmployeeRef } = {},
+): Payslip {
   return {
     id: row.id,
     employeeId: row.employeeId,
@@ -139,26 +160,84 @@ export function toPayslip(row: InferSelectModel<typeof schema.payslips>): Paysli
     periodEnd: row.periodEnd,
     payDate: row.payDate,
     status: row.status as Payslip['status'],
+    frequency: row.frequency as Payslip['frequency'],
     currency: row.currency,
     grossCents: row.grossCents,
     netCents: row.netCents,
     totalDeductionsCents: row.totalDeductionsCents,
     totalTaxCents: row.totalTaxCents,
+    totalContributionsCents: row.totalContributionsCents,
+    payRunId: row.payRunId,
     lines: parseJson<PayslipLine[]>(row.lines) ?? [],
+    createdAt: row.createdAt,
+    ...(relations.employee ? { employee: relations.employee } : {}),
+  };
+}
+
+export function deriveCoverageState(
+  status: BenefitEnrollment['status'],
+  effectiveDate: string | null,
+  endDate: string | null,
+  today: string,
+): CoverageState {
+  if (status === 'waived') return 'waived';
+  if (endDate && endDate < today) return 'ended';
+  if (effectiveDate && effectiveDate > today) return 'pending';
+  return 'current';
+}
+
+export function toPayRun(row: InferSelectModel<typeof schema.payRuns>, totals: PayRunTotals): PayRun {
+  return {
+    id: row.id,
+    periodStart: row.periodStart,
+    periodEnd: row.periodEnd,
+    payDate: row.payDate,
+    frequency: row.frequency as PayRun['frequency'],
+    status: row.status as PayRun['status'],
+    currency: row.currency,
+    payslipCount: totals.payslipCount,
+    totalGrossCents: totals.totalGrossCents,
+    totalNetCents: totals.totalNetCents,
+    createdById: row.createdById,
     createdAt: row.createdAt,
   };
 }
 
+export interface PayRunTotals {
+  payslipCount: number;
+  totalGrossCents: number;
+  totalNetCents: number;
+}
+
 export function toBenefitEnrollment(
   row: InferSelectModel<typeof schema.benefitEnrollments>,
+  relations?: { plan?: BenefitPlan; tier?: BenefitPlanTier | null; today?: string },
 ): BenefitEnrollment {
+  const status = row.status as BenefitEnrollment['status'];
+  const today = relations?.today ?? new Date().toISOString().slice(0, 10);
+  const tier = relations?.tier ?? null;
+  const monthlyPremiumCents = tier?.monthlyPremiumCents ?? relations?.plan?.monthlyPremiumCents ?? 0;
+  const employerContributionCents =
+    tier?.employerContributionCents ?? relations?.plan?.employerContributionCents ?? 0;
+  const employeeCostCents =
+    status === 'waived' ? 0 : Math.max(0, monthlyPremiumCents - employerContributionCents);
   return {
     id: row.id,
     employeeId: row.employeeId,
     planId: row.planId,
-    status: row.status as BenefitEnrollment['status'],
+    plan: relations?.plan,
+    status,
+    coverageTier: row.coverageTier as CoverageTier,
+    coverageState: deriveCoverageState(status, row.effectiveDate, row.endDate, today),
+    effectiveDate: row.effectiveDate,
+    endDate: row.endDate,
+    qleId: row.qleId,
     electedAt: row.electedAt,
     dependents: row.dependents,
+    dependentIds: parseJson<string[]>(row.dependentIds) ?? [],
+    monthlyPremiumCents,
+    employerContributionCents,
+    employeeCostCents,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -168,6 +247,7 @@ export function toGoal(row: InferSelectModel<typeof schema.goals>): Goal {
   return {
     id: row.id,
     employeeId: row.employeeId,
+    cycleId: row.cycleId,
     title: row.title,
     description: row.description,
     status: row.status as Goal['status'],
@@ -211,14 +291,51 @@ export function toReview(
   };
 }
 
+export function toOneOnOneActionItem(
+  row: InferSelectModel<typeof schema.oneOnOneActionItems>,
+): OneOnOneActionItem {
+  return {
+    id: row.id,
+    oneOnOneId: row.oneOnOneId,
+    title: row.title,
+    assigneeId: row.assigneeId,
+    completed: row.completed,
+    createdAt: row.createdAt,
+  };
+}
+
+export function toOneOnOne(
+  row: InferSelectModel<typeof schema.oneOnOnes>,
+  relations: {
+    manager?: EmployeeRef;
+    employee?: EmployeeRef;
+    actionItems?: OneOnOneActionItem[];
+  } = {},
+): OneOnOne {
+  return {
+    id: row.id,
+    managerId: row.managerId,
+    manager: relations.manager,
+    employeeId: row.employeeId,
+    employee: relations.employee,
+    scheduledFor: row.scheduledFor,
+    agenda: row.agenda,
+    notes: row.notes,
+    completed: row.completed,
+    actionItems: relations.actionItems,
+    createdAt: row.createdAt,
+  };
+}
+
 export function toJob(
   row: InferSelectModel<typeof schema.jobRequisitions>,
-  candidateCount?: number,
+  counts?: { candidateCount?: number; activeCandidateCount?: number },
 ): JobRequisition {
   return {
     id: row.id,
     title: row.title,
     department: row.department,
+    division: row.division,
     location: row.location,
     employmentType: row.employmentType,
     status: row.status as JobRequisition['status'],
@@ -226,10 +343,15 @@ export function toJob(
     hiringManagerId: row.hiringManagerId,
     recruiterId: row.recruiterId,
     openings: row.openings,
+    filledCount: row.filledCount,
     postedDate: row.postedDate,
+    closedAt: row.closedAt,
+    approvedById: row.approvedById,
+    approvedAt: row.approvedAt,
     salaryMinCents: row.salaryMinCents,
     salaryMaxCents: row.salaryMaxCents,
-    candidateCount,
+    candidateCount: counts?.candidateCount,
+    activeCandidateCount: counts?.activeCandidateCount,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -255,10 +377,12 @@ export function toCandidate(row: InferSelectModel<typeof schema.candidates>): Ca
 
 export function toOnboardingTask(
   row: InferSelectModel<typeof schema.onboardingTasks>,
+  options: { overdue?: boolean } = {},
 ): OnboardingTask {
   return {
     id: row.id,
     employeeId: row.employeeId,
+    checklistId: row.checklistId,
     title: row.title,
     description: row.description,
     category: row.category,
@@ -267,10 +391,15 @@ export function toOnboardingTask(
     dueDate: row.dueDate,
     completedAt: row.completedAt,
     orderIndex: row.orderIndex,
+    overdue: options.overdue ?? false,
   };
 }
 
-export function toCourse(row: InferSelectModel<typeof schema.courses>): Course {
+export function toCourse(
+  row: InferSelectModel<typeof schema.courses>,
+  relations: { prerequisites?: CourseRef[]; enrollmentCount?: number } = {},
+): Course {
+  const prerequisites = relations.prerequisites ?? [];
   return {
     id: row.id,
     title: row.title,
@@ -279,19 +408,33 @@ export function toCourse(row: InferSelectModel<typeof schema.courses>): Course {
     provider: row.provider,
     durationMinutes: row.durationMinutes,
     required: row.required,
+    prerequisiteIds: prerequisites.map((p) => p.id),
+    prerequisites,
+    enrollmentCount: relations.enrollmentCount,
     createdAt: row.createdAt,
   };
 }
 
 export function toCourseEnrollment(
   row: InferSelectModel<typeof schema.courseEnrollments>,
+  relations: { course?: Course; assignedBy?: EmployeeRef | null; today?: string } = {},
 ): CourseEnrollment {
+  const today = relations.today ?? new Date().toISOString().slice(0, 10);
+  const overdue =
+    row.status !== 'completed' && row.dueDate != null && row.dueDate < today;
   return {
     id: row.id,
     employeeId: row.employeeId,
     courseId: row.courseId,
+    course: relations.course,
     status: row.status as CourseEnrollment['status'],
     progress: row.progress,
+    required: row.required,
+    dueDate: row.dueDate,
+    overdue,
+    assignedById: row.assignedById,
+    assignedBy: relations.assignedBy ?? null,
+    certificateSerial: row.certificateSerial,
     enrolledAt: row.enrolledAt,
     completedAt: row.completedAt,
   };
@@ -300,19 +443,26 @@ export function toCourseEnrollment(
 export function toDocument(
   row: InferSelectModel<typeof schema.documents>,
   signedAt: string | null = row.signedAt,
+  signatures?: HrDocument['signatures'],
 ): HrDocument {
   return {
     id: row.id,
     employeeId: row.employeeId,
+    visibility: row.employeeId ? 'personal' : 'company',
     name: row.name,
+    description: row.description,
     category: row.category,
     contentType: row.contentType,
     sizeBytes: row.sizeBytes,
     url: row.url,
+    version: row.version,
+    status: row.status as HrDocument['status'],
     requiresSignature: row.requiresSignature,
     signedAt,
+    signatures,
     uploadedById: row.uploadedById,
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 

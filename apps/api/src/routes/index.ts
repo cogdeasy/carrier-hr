@@ -13,6 +13,7 @@ import { recruitingRoutes } from './recruiting.routes.js';
 import { onboardingRoutes } from './onboarding.routes.js';
 import { learningRoutes } from './learning.routes.js';
 import { documentRoutes } from './documents.routes.js';
+import { adminRoutes } from './admin.routes.js';
 
 /**
  * Mounts every feature route group under the `/api` prefix. Each group is a
@@ -33,4 +34,5 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   await app.register(documentRoutes, { prefix: '/documents' });
   await app.register(notificationRoutes, { prefix: '/notifications' });
   await app.register(analyticsRoutes, { prefix: '/analytics' });
+  await app.register(adminRoutes, { prefix: '/admin' });
 }
