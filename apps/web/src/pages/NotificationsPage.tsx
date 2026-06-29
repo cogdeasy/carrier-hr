@@ -303,6 +303,10 @@ function PreferencesModal({ open, onClose }: { open: boolean; onClose: () => voi
     if (data) setDraft(data.preferences);
   }, [data]);
 
+  useEffect(() => {
+    if (!open) setDraft(null);
+  }, [open]);
+
   const save = useMutation({
     mutationFn: (preferences: NotificationPreference[]) =>
       api.put('/notifications/preferences', { preferences }),
@@ -341,12 +345,12 @@ function PreferencesModal({ open, onClose }: { open: boolean; onClose: () => voi
         Mute a category to stop receiving new notifications of that kind. Existing notifications are
         kept.
       </p>
-      {isLoading || !draft ? (
+      {isError ? (
+        <p className="py-6 text-center text-sm text-red-600">Couldn't load preferences.</p>
+      ) : isLoading || !draft ? (
         <div className="flex justify-center py-8">
           <Spinner className="h-6 w-6" />
         </div>
-      ) : isError ? (
-        <p className="py-6 text-center text-sm text-red-600">Couldn't load preferences.</p>
       ) : (
         <ul className="divide-y divide-slate-100">
           {draft.map((pref) => (
