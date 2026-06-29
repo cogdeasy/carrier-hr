@@ -157,6 +157,28 @@ describe('onboarding & offboarding', () => {
     expect(reopened.json().percentComplete).toBe(67);
   });
 
+  it('reopens a completed checklist when a new task is added', async () => {
+    const created = (await instantiate(employee.employeeId, isoIn(0))).json();
+    for (const t of created.tasks) {
+      await ctx.app.inject({
+        method: 'PATCH',
+        url: `/api/onboarding/tasks/${t.id}`,
+        headers: authHeader(hrToken),
+        payload: { status: 'completed' },
+      });
+    }
+
+    const added = await ctx.app.inject({
+      method: 'POST',
+      url: `/api/onboarding/checklists/${created.id}/tasks`,
+      headers: authHeader(hrToken),
+      payload: { title: 'Extra follow-up', assigneeRole: 'manager', category: 'general' },
+    });
+    expect(added.statusCode).toBe(201);
+    expect(added.json().status).toBe('active');
+    expect(added.json().percentComplete).toBeLessThan(100);
+  });
+
   it('derives overdue tasks from past due dates', async () => {
     const created = (await instantiate(employee.employeeId, isoIn(-10))).json();
     // anchor 10 days ago; offset-0 tasks are now overdue, the +30 task is not.

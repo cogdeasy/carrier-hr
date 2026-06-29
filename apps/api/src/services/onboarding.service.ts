@@ -633,6 +633,7 @@ export async function addChecklistTask(
     dueDate: input.dueDate ?? null,
     orderIndex,
   });
+  await syncChecklistCompletion(db, checklistId);
   return getChecklist(db, requester, checklistId);
 }
 
