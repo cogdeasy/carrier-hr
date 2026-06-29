@@ -335,7 +335,10 @@ export async function decideRequest(
     await assertWithinBalance(db, row.employeeId, row.type as TimeOffType, yearOf(row.startDate), row.totalDays);
   }
 
-  await db
+  // Guard the transition on the still-pending status so a duplicate/concurrent
+  // decision can't double-apply the balance change. If no row matched, another
+  // call already decided this request.
+  const decided = await db
     .update(timeOffRequests)
     .set({
       status,
@@ -344,7 +347,8 @@ export async function decideRequest(
       decidedAt: nowIso(),
       updatedAt: nowIso(),
     })
-    .where(eq(timeOffRequests.id, requestId));
+    .where(and(eq(timeOffRequests.id, requestId), eq(timeOffRequests.status, 'pending')));
+  if (decided.rowsAffected === 0) throw BadRequest('Request has already been decided');
 
   if (status === 'approved' && isAccrualTimeOffType(row.type)) {
     await adjustUsedDays(db, row.employeeId, row.type as TimeOffType, yearOf(row.startDate), row.totalDays);
@@ -383,7 +387,7 @@ export async function cancelRequest(
     await db
       .update(timeOffRequests)
       .set({ status: 'cancelled', updatedAt: nowIso() })
-      .where(eq(timeOffRequests.id, requestId));
+      .where(and(eq(timeOffRequests.id, requestId), eq(timeOffRequests.status, 'pending')));
   } else if (row.status === 'approved') {
     // Approved leave can only be withdrawn before it begins; once it has
     // started the time is considered taken. Cancelling refunds any used accrual.
@@ -391,11 +395,13 @@ export async function cancelRequest(
     if (row.startDate <= today) {
       throw BadRequest('Approved leave that has already started cannot be cancelled');
     }
-    await db
+    // Guard on the still-approved status so two concurrent cancels can't each
+    // refund the accrual (double credit). Only the winning update refunds.
+    const cancelled = await db
       .update(timeOffRequests)
       .set({ status: 'cancelled', updatedAt: nowIso() })
-      .where(eq(timeOffRequests.id, requestId));
-    if (isAccrualTimeOffType(row.type)) {
+      .where(and(eq(timeOffRequests.id, requestId), eq(timeOffRequests.status, 'approved')));
+    if (cancelled.rowsAffected > 0 && isAccrualTimeOffType(row.type)) {
       await adjustUsedDays(db, row.employeeId, row.type as TimeOffType, yearOf(row.startDate), -row.totalDays);
     }
   } else {

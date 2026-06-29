@@ -411,6 +411,56 @@ describe('time-off approval authorization', () => {
       .where(eq(timeOffBalances.employeeId, emp.employeeId));
     expect(balance!.usedDays).toBe(daysA + daysB);
   });
+
+  it('does not double-decrement when the same request is approved twice', async () => {
+    const mgr = await seedUser(ctx.db, { email: 'dup.mgr@collins.com', roles: ['manager'] });
+    const emp = await seedUser(ctx.db, {
+      email: 'dup.emp@collins.com',
+      roles: ['employee'],
+      managerId: mgr.employeeId,
+    });
+    await ctx.db.insert(timeOffBalances).values({
+      id: createId('tob'),
+      employeeId: emp.employeeId,
+      type: 'vacation',
+      accruedDays: 20,
+      usedDays: 0,
+      year,
+    });
+    const empToken = await login(ctx.app, 'dup.emp@collins.com');
+    const created = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/time-off/requests',
+      headers: authHeader(empToken),
+      payload: { type: 'vacation', startDate: `${year}-09-07`, endDate: `${year}-09-09` },
+    });
+    const id = created.json().id as string;
+    const days = created.json().totalDays as number;
+
+    const mgrToken = await login(ctx.app, 'dup.mgr@collins.com');
+    const first = await ctx.app.inject({
+      method: 'POST',
+      url: `/api/time-off/requests/${id}/decision`,
+      headers: authHeader(mgrToken),
+      payload: { decision: 'approved' },
+    });
+    expect(first.statusCode).toBe(200);
+
+    const second = await ctx.app.inject({
+      method: 'POST',
+      url: `/api/time-off/requests/${id}/decision`,
+      headers: authHeader(mgrToken),
+      payload: { decision: 'approved' },
+    });
+    expect(second.statusCode).toBe(400);
+    expect(second.json().error.message).toMatch(/already been decided/i);
+
+    const [balance] = await ctx.db
+      .select()
+      .from(timeOffBalances)
+      .where(eq(timeOffBalances.employeeId, emp.employeeId));
+    expect(balance!.usedDays).toBe(days);
+  });
 });
 
 describe('time-off holidays and calendar', () => {
