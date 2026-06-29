@@ -65,6 +65,20 @@ export type OnboardingTaskStatus = (typeof ONBOARDING_TASK_STATUSES)[number];
 export const COURSE_STATUSES = ['not_started', 'in_progress', 'completed'] as const;
 export type CourseStatus = (typeof COURSE_STATUSES)[number];
 
+export const COURSE_CATEGORIES = [
+  'Compliance',
+  'Safety',
+  'Security',
+  'Leadership',
+  'Technical',
+  'Operations',
+  'Professional',
+] as const;
+export type CourseCategory = (typeof COURSE_CATEGORIES)[number];
+
+export const COURSE_SORTS = ['title', 'duration', 'recent'] as const;
+export type CourseSort = (typeof COURSE_SORTS)[number];
+
 export const BENEFIT_TYPES = [
   'medical',
   'dental',
@@ -91,6 +105,7 @@ export const NOTIFICATION_TYPES = [
   'goal_update',
   'document_request',
   'onboarding_task',
+  'learning_assigned',
   'announcement',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

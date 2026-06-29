@@ -8,6 +8,7 @@ import type {
   Candidate,
   Course,
   CourseEnrollment,
+  CourseRef,
   Employee,
   EmployeeRef,
   EmergencyContact,
@@ -387,7 +388,11 @@ export function toOnboardingTask(
   };
 }
 
-export function toCourse(row: InferSelectModel<typeof schema.courses>): Course {
+export function toCourse(
+  row: InferSelectModel<typeof schema.courses>,
+  relations: { prerequisites?: CourseRef[]; enrollmentCount?: number } = {},
+): Course {
+  const prerequisites = relations.prerequisites ?? [];
   return {
     id: row.id,
     title: row.title,
@@ -396,19 +401,33 @@ export function toCourse(row: InferSelectModel<typeof schema.courses>): Course {
     provider: row.provider,
     durationMinutes: row.durationMinutes,
     required: row.required,
+    prerequisiteIds: prerequisites.map((p) => p.id),
+    prerequisites,
+    enrollmentCount: relations.enrollmentCount,
     createdAt: row.createdAt,
   };
 }
 
 export function toCourseEnrollment(
   row: InferSelectModel<typeof schema.courseEnrollments>,
+  relations: { course?: Course; assignedBy?: EmployeeRef | null; today?: string } = {},
 ): CourseEnrollment {
+  const today = relations.today ?? new Date().toISOString().slice(0, 10);
+  const overdue =
+    row.status !== 'completed' && row.dueDate != null && row.dueDate < today;
   return {
     id: row.id,
     employeeId: row.employeeId,
     courseId: row.courseId,
+    course: relations.course,
     status: row.status as CourseEnrollment['status'],
     progress: row.progress,
+    required: row.required,
+    dueDate: row.dueDate,
+    overdue,
+    assignedById: row.assignedById,
+    assignedBy: relations.assignedBy ?? null,
+    certificateSerial: row.certificateSerial,
     enrolledAt: row.enrolledAt,
     completedAt: row.completedAt,
   };
