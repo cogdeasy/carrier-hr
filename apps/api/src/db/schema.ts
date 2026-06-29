@@ -266,6 +266,7 @@ export const goals = sqliteTable(
     employeeId: text('employee_id')
       .notNull()
       .references(() => employees.id, { onDelete: 'cascade' }),
+    cycleId: text('cycle_id').references(() => reviewCycles.id, { onDelete: 'set null' }),
     title: text('title').notNull(),
     description: text('description'),
     status: text('status').notNull().default('active'),
@@ -275,6 +276,7 @@ export const goals = sqliteTable(
   },
   (t) => ({
     employeeIdx: index('goals_employee_idx').on(t.employeeId),
+    cycleIdx: index('goals_cycle_idx').on(t.cycleId),
   }),
 );
 
@@ -330,6 +332,25 @@ export const oneOnOnes = sqliteTable('one_on_ones', {
     .notNull()
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
 });
+
+export const oneOnOneActionItems = sqliteTable(
+  'one_on_one_action_items',
+  {
+    id: text('id').primaryKey(),
+    oneOnOneId: text('one_on_one_id')
+      .notNull()
+      .references(() => oneOnOnes.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    assigneeId: text('assignee_id').references(() => employees.id, { onDelete: 'set null' }),
+    completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  (t) => ({
+    meetingIdx: index('one_on_one_action_items_meeting_idx').on(t.oneOnOneId),
+  }),
+);
 
 // ---------------------------------------------------------------------------
 // Recruiting
