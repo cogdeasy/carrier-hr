@@ -176,7 +176,12 @@ export async function deleteDependent(db: Database, employeeId: string, id: stri
     .where(eq(benefitEnrollments.employeeId, employeeId));
   const blockedByActive = covering.some((e) => {
     if (!(JSON.parse(e.dependentIds) as string[]).includes(id)) return false;
-    const state = deriveCoverageState(e.status, e.effectiveDate, e.endDate, today);
+    const state = deriveCoverageState(
+      e.status as BenefitEnrollment['status'],
+      e.effectiveDate,
+      e.endDate,
+      today,
+    );
     return state === 'current' || state === 'pending';
   });
   if (blockedByActive) {
