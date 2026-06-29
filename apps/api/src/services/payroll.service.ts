@@ -223,13 +223,15 @@ export async function generatePayRun(
   input: GeneratePayRunInput,
 ): Promise<PayRunDetail> {
   const compRows = await db.select().from(compensations);
-  // Latest compensation per employee.
+  // Latest compensation effective on or before the period end, per employee.
   const latestComp = new Map<string, (typeof compRows)[number]>();
-  for (const c of [...compRows].sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate))) {
+  for (const c of [...compRows]
+    .filter((c) => c.effectiveDate <= input.periodEnd)
+    .sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate))) {
     latestComp.set(c.employeeId, c);
   }
 
-  let targetIds = input.employeeIds ?? [...latestComp.keys()];
+  let targetIds: string[];
   if (input.employeeIds) {
     const valid = new Set(
       (
@@ -241,8 +243,19 @@ export async function generatePayRun(
     );
     const missing = input.employeeIds.filter((id) => !valid.has(id));
     if (missing.length) throw NotFound(`Unknown employee(s): ${missing.join(', ')}`);
+    targetIds = input.employeeIds.filter((id) => latestComp.has(id));
+  } else {
+    // Blanket run: only currently-active employees with a compensation record.
+    const activeIds = new Set(
+      (
+        await db
+          .select({ id: employees.id })
+          .from(employees)
+          .where(eq(employees.status, 'active'))
+      ).map((r) => r.id),
+    );
+    targetIds = [...latestComp.keys()].filter((id) => activeIds.has(id));
   }
-  targetIds = targetIds.filter((id) => latestComp.has(id));
   if (targetIds.length === 0) {
     throw BadRequest('No employees with compensation records to pay in this run');
   }
@@ -269,23 +282,12 @@ export async function generatePayRun(
 
   const payRunId = createId('prun');
   const currency = latestComp.get(toPay[0]!)?.currency ?? 'USD';
-  await db.insert(payRuns).values({
-    id: payRunId,
-    periodStart: input.periodStart,
-    periodEnd: input.periodEnd,
-    payDate: input.payDate,
-    frequency: input.frequency,
-    status: 'issued',
-    currency,
-    createdById: actorId,
-  });
-
-  for (const employeeId of toPay) {
+  const payslipRows = toPay.map((employeeId) => {
     const comp = latestComp.get(employeeId)!;
     const grossCents = Math.round(comp.annualSalaryCents / PERIODS_PER_YEAR[input.frequency]);
     const lines = buildStandardLines(grossCents);
     const totals = summarizeLines(lines);
-    await db.insert(payslips).values({
+    return {
       id: createId('pay'),
       employeeId,
       periodStart: input.periodStart,
@@ -301,8 +303,23 @@ export async function generatePayRun(
       totalContributionsCents: totals.totalContributionsCents,
       payRunId,
       lines: JSON.stringify(lines),
-    });
-  }
+    };
+  });
+
+  // Run as a single atomic batch so a failure never leaves an orphaned pay run.
+  await db.batch([
+    db.insert(payRuns).values({
+      id: payRunId,
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      payDate: input.payDate,
+      frequency: input.frequency,
+      status: 'issued',
+      currency,
+      createdById: actorId,
+    }),
+    db.insert(payslips).values(payslipRows),
+  ]);
 
   return getPayRun(db, payRunId);
 }

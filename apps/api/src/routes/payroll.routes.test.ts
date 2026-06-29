@@ -218,6 +218,39 @@ describe('payroll', () => {
     expect(second.statusCode).toBe(409);
   });
 
+  it('excludes terminated employees from a blanket pay run', async () => {
+    const ghost = await seedUser(ctx.db, {
+      email: 'pay.ghost@collins.com',
+      roles: ['employee'],
+      status: 'terminated',
+    });
+    await ctx.db.insert(compensations).values({
+      id: createId('cmp'),
+      employeeId: ghost.employeeId,
+      annualSalaryCents: 9_000_000,
+      currency: 'USD',
+      payFrequency: 'biweekly',
+      effectiveDate: '2024-01-01',
+    });
+
+    const res = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/payroll/pay-runs',
+      headers: authHeader(hrToken),
+      payload: {
+        periodStart: '2026-11-01',
+        periodEnd: '2026-11-14',
+        payDate: '2026-11-15',
+        frequency: 'biweekly' as const,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const run = res.json();
+    expect(
+      run.payslips.some((p: { employeeId: string }) => p.employeeId === ghost.employeeId),
+    ).toBe(false);
+  });
+
   it('rejects a duplicate manual payslip for the same employee and period', async () => {
     const token = hrToken;
     const payload = {
