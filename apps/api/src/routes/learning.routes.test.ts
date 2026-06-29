@@ -239,6 +239,14 @@ describe('learning & development', () => {
         payload: { courseId: leadershipCourse },
       });
       expect(nowAllowed.statusCode).toBe(201);
+
+      const reopen = await ctx.app.inject({
+        method: 'PATCH',
+        url: `/api/learning/enrollments/${enrollment.id}`,
+        headers: authHeader(token),
+        payload: { progress: 40 },
+      });
+      expect(reopen.statusCode).toBe(400);
     });
 
     it('rejects duplicate enrollment', async () => {

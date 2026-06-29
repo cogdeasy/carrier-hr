@@ -94,9 +94,10 @@ export async function listCourses(db: Database, query: ListCoursesQuery): Promis
   if (query.provider) conditions.push(eq(courses.provider, query.provider));
   if (query.required !== undefined) conditions.push(eq(courses.required, query.required));
   if (query.search) {
-    const term = `%${query.search.toLowerCase()}%`;
+    const escaped = query.search.toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`);
+    const term = `%${escaped}%`;
     conditions.push(
-      sql`(lower(${courses.title}) like ${term} or lower(${courses.description}) like ${term})`,
+      sql`(lower(${courses.title}) like ${term} escape '\\' or lower(${courses.description}) like ${term} escape '\\')`,
     );
   }
 
@@ -359,6 +360,9 @@ export async function updateProgress(
 
   const status = statusForProgress(progress);
   const completed = status === 'completed';
+  if (row.status === 'completed' && !completed) {
+    throw BadRequest('A completed course cannot be reopened');
+  }
   await db
     .update(courseEnrollments)
     .set({
