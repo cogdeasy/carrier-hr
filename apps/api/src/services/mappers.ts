@@ -160,7 +160,7 @@ export function deriveCoverageState(
   today: string,
 ): CoverageState {
   if (status === 'waived') return 'waived';
-  if (endDate && endDate <= today) return 'ended';
+  if (endDate && endDate < today) return 'ended';
   if (effectiveDate && effectiveDate > today) return 'pending';
   return 'current';
 }
