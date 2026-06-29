@@ -124,6 +124,7 @@ export const timeOffRequests = sqliteTable(
     endDate: text('end_date').notNull(),
     totalDays: real('total_days').notNull(),
     reason: text('reason'),
+    attachmentUrl: text('attachment_url'),
     status: text('status').notNull().default('pending'),
     approverId: text('approver_id').references(() => employees.id),
     decisionNote: text('decision_note'),
@@ -141,6 +142,15 @@ export const companyHolidays = sqliteTable('company_holidays', {
   name: text('name').notNull(),
   date: text('date').notNull(),
   region: text('region').notNull().default('US'),
+});
+
+export const timeOffPolicies = sqliteTable('time_off_policies', {
+  id: text('id').primaryKey(),
+  type: text('type').notNull().unique(),
+  accrual: integer('accrual', { mode: 'boolean' }).notNull().default(false),
+  annualAccrualDays: real('annual_accrual_days').notNull().default(0),
+  maxCarryoverDays: real('max_carryover_days').notNull().default(0),
+  requiresApproval: integer('requires_approval', { mode: 'boolean' }).notNull().default(true),
 });
 
 // ---------------------------------------------------------------------------

@@ -103,6 +103,7 @@ export function toTimeOffRequest(
     endDate: row.endDate,
     totalDays: row.totalDays,
     reason: row.reason,
+    attachmentUrl: row.attachmentUrl,
     status: row.status as TimeOffRequest['status'],
     approverId: row.approverId,
     approver: relations.approver ?? undefined,
