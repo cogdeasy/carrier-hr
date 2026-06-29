@@ -354,10 +354,10 @@ async function seedSupporting(db: Database): Promise<void> {
         totalTaxCents: tax,
         lines: JSON.stringify([
           { label: 'Base Salary', type: 'earning', amountCents: grossPerPeriod },
-          { label: 'Federal Income Tax', type: 'tax', amountCents: -Math.round(tax * 0.7) },
-          { label: 'State Income Tax', type: 'tax', amountCents: -Math.round(tax * 0.3) },
-          { label: 'Medical Premium', type: 'deduction', amountCents: -Math.round(deductions * 0.6) },
-          { label: '401(k) Contribution', type: 'deduction', amountCents: -Math.round(deductions * 0.4) },
+          { label: 'Federal Income Tax', type: 'tax', amountCents: Math.round(tax * 0.7) },
+          { label: 'State Income Tax', type: 'tax', amountCents: Math.round(tax * 0.3) },
+          { label: 'Medical Premium', type: 'deduction', amountCents: Math.round(deductions * 0.6) },
+          { label: '401(k) Contribution', type: 'deduction', amountCents: Math.round(deductions * 0.4) },
         ]),
       });
     }

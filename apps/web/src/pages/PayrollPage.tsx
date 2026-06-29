@@ -116,7 +116,7 @@ export function PayrollPage() {
                       }
                     >
                       {line.type === 'earning' ? '' : '−'}
-                      {formatCents(line.amountCents)}
+                      {formatCents(Math.abs(line.amountCents))}
                     </td>
                   </tr>
                 ))}

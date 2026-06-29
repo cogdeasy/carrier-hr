@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { updateOnboardingTaskSchema } from '@carrier-hr/shared';
+import { hasPermission, updateOnboardingTaskSchema } from '@carrier-hr/shared';
 import { parse } from '../lib/validate.js';
 import { getPlan, updateTask } from '../services/onboarding.service.js';
 
@@ -21,6 +21,10 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
   app.patch('/tasks/:id', async (req) => {
     const { id } = parse(z.object({ id: z.string() }), req.params);
     const input = parse(updateOnboardingTaskSchema, req.body);
-    return updateTask(app.db, id, input.status);
+    const canManage = hasPermission(req.principal.roles, 'onboarding:admin');
+    return updateTask(app.db, id, input.status, {
+      employeeId: req.principal.employeeId,
+      canManage,
+    });
   });
 }

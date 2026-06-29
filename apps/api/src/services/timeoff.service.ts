@@ -39,6 +39,7 @@ export async function getBalances(
     );
   const pendingByType = new Map<string, number>();
   for (const r of pendingRows) {
+    if (yearOf(r.startDate) !== year) continue;
     pendingByType.set(r.type, (pendingByType.get(r.type) ?? 0) + r.totalDays);
   }
 

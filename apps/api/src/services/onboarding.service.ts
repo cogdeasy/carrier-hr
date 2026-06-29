@@ -2,7 +2,7 @@ import { and, asc, eq } from 'drizzle-orm';
 import type { OnboardingPlan, OnboardingTaskStatus } from '@carrier-hr/shared';
 import type { Database } from '../db/client.js';
 import { onboardingTasks } from '../db/schema.js';
-import { NotFound } from '../lib/errors.js';
+import { Forbidden, NotFound } from '../lib/errors.js';
 import { nowIso } from '../lib/dates.js';
 import { toOnboardingTask } from './mappers.js';
 
@@ -27,6 +27,7 @@ export async function updateTask(
   db: Database,
   taskId: string,
   status: OnboardingTaskStatus,
+  requester: { employeeId: string; canManage: boolean },
 ): Promise<OnboardingPlan> {
   const [row] = await db
     .select()
@@ -34,6 +35,9 @@ export async function updateTask(
     .where(eq(onboardingTasks.id, taskId))
     .limit(1);
   if (!row) throw NotFound('Onboarding task not found');
+  if (!requester.canManage && row.employeeId !== requester.employeeId) {
+    throw Forbidden('You can only update your own onboarding tasks');
+  }
   await db
     .update(onboardingTasks)
     .set({ status, completedAt: status === 'completed' ? nowIso() : null })

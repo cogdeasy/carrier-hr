@@ -11,8 +11,11 @@ export async function notificationRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('onRequest', app.authenticate);
 
   app.get('/', async (req) => {
-    const { unread } = parse(z.object({ unread: z.coerce.boolean().optional() }), req.query);
-    return listNotifications(app.db, req.principal.employeeId, unread ?? false);
+    const { unread } = parse(
+      z.object({ unread: z.enum(['true', 'false']).optional() }),
+      req.query,
+    );
+    return listNotifications(app.db, req.principal.employeeId, unread === 'true');
   });
 
   app.post('/:id/read', async (req, reply) => {

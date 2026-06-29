@@ -1,17 +1,29 @@
 import 'dotenv/config';
 import { z } from 'zod';
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().int().default(4000),
-  HOST: z.string().default('0.0.0.0'),
-  CORS_ORIGINS: z.string().default('http://localhost:5173'),
-  JWT_SECRET: z.string().min(16).default('dev-only-insecure-secret-change-me'),
-  JWT_EXPIRES_IN: z.string().default('8h'),
-  DATABASE_URL: z.string().default('file:./local.db'),
-  DATABASE_AUTH_TOKEN: z.string().optional(),
-  SEED_DEFAULT_PASSWORD: z.string().default('Password123!'),
-});
+const DEFAULT_JWT_SECRET = 'dev-only-insecure-secret-change-me';
+
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    PORT: z.coerce.number().int().default(4000),
+    HOST: z.string().default('0.0.0.0'),
+    CORS_ORIGINS: z.string().default('http://localhost:5173'),
+    JWT_SECRET: z.string().min(16).default(DEFAULT_JWT_SECRET),
+    JWT_EXPIRES_IN: z.string().default('8h'),
+    DATABASE_URL: z.string().default('file:./local.db'),
+    DATABASE_AUTH_TOKEN: z.string().optional(),
+    SEED_DEFAULT_PASSWORD: z.string().default('Password123!'),
+  })
+  .superRefine((env, ctx) => {
+    if (env.NODE_ENV === 'production' && env.JWT_SECRET === DEFAULT_JWT_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['JWT_SECRET'],
+        message: 'JWT_SECRET must be set to a strong, unique value in production',
+      });
+    }
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

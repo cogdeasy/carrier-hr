@@ -8,6 +8,7 @@ import {
   updateGoalSchema,
 } from '@carrier-hr/shared';
 import { parse } from '../lib/validate.js';
+import { Forbidden } from '../lib/errors.js';
 import { listDirectReports } from '../services/employee.service.js';
 import {
   createGoal,
@@ -72,7 +73,19 @@ export async function performanceRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/reviews/:id', async (req) => {
     const { id } = parse(z.object({ id: z.string() }), req.params);
-    return getReview(app.db, id);
+    const review = await getReview(app.db, id);
+    const isSubject = review.employeeId === req.principal.employeeId;
+    const isReviewer = review.reviewerId === req.principal.employeeId;
+    const isAdmin = hasPermission(req.principal.roles, 'performance:admin');
+    let isManagerOfSubject = false;
+    if (!isSubject && !isReviewer && !isAdmin) {
+      const reports = await listDirectReports(app.db, req.principal.employeeId);
+      isManagerOfSubject = reports.some((r) => r.id === review.employeeId);
+    }
+    if (!isSubject && !isReviewer && !isAdmin && !isManagerOfSubject) {
+      throw Forbidden('You do not have access to this review');
+    }
+    return review;
   });
 
   app.post('/reviews/:id/self', async (req) => {
