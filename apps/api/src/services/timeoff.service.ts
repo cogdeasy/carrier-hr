@@ -556,32 +556,24 @@ export async function runCarryover(
     const carried = Math.min(remaining, policy.maxCarryoverDays);
     const accrued = policy.annualAccrualDays + carried;
 
-    const [existing] = await db
-      .select()
-      .from(timeOffBalances)
-      .where(
-        and(
-          eq(timeOffBalances.employeeId, row.employeeId),
-          eq(timeOffBalances.type, row.type),
-          eq(timeOffBalances.year, toYear),
-        ),
-      )
-      .limit(1);
-    if (existing) {
-      await db
-        .update(timeOffBalances)
-        .set({ accruedDays: accrued })
-        .where(eq(timeOffBalances.id, existing.id));
-    } else {
-      await db.insert(timeOffBalances).values({
+    // Upsert on the (employee, type, year) unique index so a concurrent
+    // carryover can't race a select-then-insert into a constraint violation.
+    // Only accruedDays is set on conflict, preserving any usedDays already
+    // taken in the target year.
+    await db
+      .insert(timeOffBalances)
+      .values({
         id: createId('tob'),
         employeeId: row.employeeId,
         type: row.type,
         accruedDays: accrued,
         usedDays: 0,
         year: toYear,
+      })
+      .onConflictDoUpdate({
+        target: [timeOffBalances.employeeId, timeOffBalances.type, timeOffBalances.year],
+        set: { accruedDays: accrued },
       });
-    }
     processed += 1;
   }
   return { processed, toYear };
