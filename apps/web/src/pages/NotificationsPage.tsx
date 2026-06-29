@@ -303,8 +303,8 @@ function PreferencesModal({ open, onClose }: { open: boolean; onClose: () => voi
   });
 
   useEffect(() => {
-    if (data) setDraft(data.preferences);
-  }, [data]);
+    if (open && data) setDraft(data.preferences);
+  }, [data, open]);
 
   useEffect(() => {
     if (!open) setDraft(null);
