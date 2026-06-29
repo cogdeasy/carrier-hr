@@ -21,7 +21,10 @@ export type NotificationList = z.infer<typeof notificationListSchema>;
 export const listNotificationsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(20),
-  unread: z.coerce.boolean().optional(),
+  unread: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
   type: z.enum(NOTIFICATION_TYPES).optional(),
 });
 export type ListNotificationsQuery = z.infer<typeof listNotificationsQuerySchema>;

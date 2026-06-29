@@ -96,6 +96,13 @@ describe('notifications routes', () => {
     });
     expect(byType.json().total).toBe(1);
     expect(byType.json().data[0].type).toBe('announcement');
+
+    const all = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/notifications?unread=false',
+      headers: authHeader(aliceToken),
+    });
+    expect(all.json().total).toBe(2);
   });
 
   it('paginates results newest-first', async () => {
