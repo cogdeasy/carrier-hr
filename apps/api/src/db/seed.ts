@@ -1,4 +1,5 @@
 import type { Role } from '@collins-hr/shared';
+import { DEFAULT_TIME_OFF_POLICIES } from '@collins-hr/shared';
 import { getEnv } from '../env.js';
 import { hashPassword } from '../auth/password.js';
 import { businessDaysBetween } from '../lib/dates.js';
@@ -286,6 +287,11 @@ async function seedSupporting(db: Database): Promise<void> {
     await db.insert(t.companyHolidays).values({ id: createId('hol'), name: h.name, date: h.date, region: 'US' });
   }
 
+  // Time-off policies (per-type accrual, carryover cap & approval rules)
+  for (const p of DEFAULT_TIME_OFF_POLICIES) {
+    await db.insert(t.timeOffPolicies).values({ id: createId('top'), ...p });
+  }
+
   // Benefit plans
   const planIds: string[] = [];
   for (const p of BENEFIT_PLANS) {
@@ -441,9 +447,12 @@ async function seedSupporting(db: Database): Promise<void> {
     });
   }
 
-  // Time-off requests (pending ones routed to managers for approval testing)
+  // Time-off requests (pending ones routed to managers for approval testing).
+  // The primary demo employee is left without seeded requests so the live
+  // request flow (and its e2e) always starts from a clean, non-overlapping slate.
   for (const e of active) {
     if (!e.managerId) continue;
+    if (e.email === 'employee@collins.com') continue;
     if (rand() < 0.4) {
       const start = daysAgo(-randInt(7, 40));
       const end = daysAgo(-(randInt(1, 6) + 7));
