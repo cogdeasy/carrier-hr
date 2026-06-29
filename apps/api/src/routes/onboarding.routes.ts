@@ -153,11 +153,15 @@ export async function onboardingRoutes(app: FastifyInstance): Promise<void> {
     return reply.status(201).send(checklist);
   });
 
-  app.post('/offboarding', async (req, reply) => {
-    const input = parse(triggerOffboardingSchema, req.body);
-    const checklist = await triggerOffboarding(app.db, requester(req), input);
-    return reply.status(201).send(checklist);
-  });
+  app.post(
+    '/offboarding',
+    { onRequest: [app.requirePermission('onboarding:admin')] },
+    async (req, reply) => {
+      const input = parse(triggerOffboardingSchema, req.body);
+      const checklist = await triggerOffboarding(app.db, requester(req), input);
+      return reply.status(201).send(checklist);
+    },
+  );
 
   app.patch('/checklists/:id', async (req) => {
     const { id } = parse(idParam, req.params);

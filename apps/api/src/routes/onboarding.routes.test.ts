@@ -236,6 +236,16 @@ describe('onboarding & offboarding', () => {
     expect(profile.json().status).toBe('terminated');
   });
 
+  it('forbids managers from triggering offboarding (HR-only)', async () => {
+    const res = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/onboarding/offboarding',
+      headers: authHeader(managerToken),
+      payload: { employeeId: employee.employeeId, lastDay: isoIn(7) },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
   it('enforces template management permissions', async () => {
     const forbidden = await ctx.app.inject({
       method: 'POST',
