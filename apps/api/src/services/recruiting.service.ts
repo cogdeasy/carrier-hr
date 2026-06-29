@@ -510,11 +510,12 @@ export async function moveCandidateStage(
     await assertHireable(db, row);
   }
 
-  await db
+  const now = nowIso();
+  const updateStage = db
     .update(candidates)
-    .set({ stage: to, updatedAt: nowIso() })
+    .set({ stage: to, updatedAt: now })
     .where(eq(candidates.id, id));
-  await db.insert(candidateStageEvents).values({
+  const recordEvent = db.insert(candidateStageEvents).values({
     id: createId('cse'),
     candidateId: id,
     fromStage: from,
@@ -522,8 +523,11 @@ export async function moveCandidateStage(
     note: input.note ?? null,
     changedById: actor.employeeId,
   });
-
-  if (to === 'hired') await fillOpening(db, row.jobId);
+  await db.batch(
+    to === 'hired'
+      ? [updateStage, recordEvent, fillOpeningStmt(db, row.jobId, now)]
+      : [updateStage, recordEvent],
+  );
 
   return toCandidate(await loadCandidate(db, id));
 }
@@ -545,19 +549,22 @@ async function assertHireable(db: Database, candidate: CandidateRow): Promise<vo
   }
 }
 
-/** Atomically claim an opening, auto-filling the requisition when none remain. */
-async function fillOpening(db: Database, jobId: string): Promise<void> {
-  await db
+/**
+ * Build a single atomic statement that claims an opening and auto-fills the
+ * requisition (in the same row write) once no openings remain.
+ */
+function fillOpeningStmt(db: Database, jobId: string, now: string) {
+  const filled = sql`${jobRequisitions.filledCount} + 1`;
+  const isFull = sql`${filled} >= ${jobRequisitions.openings}`;
+  return db
     .update(jobRequisitions)
-    .set({ filledCount: sql`${jobRequisitions.filledCount} + 1`, updatedAt: nowIso() })
+    .set({
+      filledCount: filled,
+      status: sql`CASE WHEN ${isFull} THEN 'filled' ELSE ${jobRequisitions.status} END`,
+      closedAt: sql`CASE WHEN ${isFull} THEN ${now} ELSE ${jobRequisitions.closedAt} END`,
+      updatedAt: now,
+    })
     .where(eq(jobRequisitions.id, jobId));
-  const job = await loadJob(db, jobId);
-  if (job.filledCount >= job.openings) {
-    await db
-      .update(jobRequisitions)
-      .set({ status: 'filled', closedAt: nowIso(), updatedAt: nowIso() })
-      .where(eq(jobRequisitions.id, jobId));
-  }
 }
 
 export async function getCandidateDetail(
@@ -723,21 +730,23 @@ export async function submitScorecard(
 
   const interviewerId = interview.interviewerId;
   const id = createId('scr');
-  await db.insert(interviewScorecards).values({
-    id,
-    interviewId,
-    candidateId: interview.candidateId,
-    interviewerId,
-    rating: input.rating,
-    recommendation: input.recommendation,
-    strengths: input.strengths ?? null,
-    concerns: input.concerns ?? null,
-    comments: input.comments ?? null,
-  });
-  await db
-    .update(interviews)
-    .set({ status: 'completed', updatedAt: nowIso() })
-    .where(eq(interviews.id, interviewId));
+  await db.batch([
+    db.insert(interviewScorecards).values({
+      id,
+      interviewId,
+      candidateId: interview.candidateId,
+      interviewerId,
+      rating: input.rating,
+      recommendation: input.recommendation,
+      strengths: input.strengths ?? null,
+      concerns: input.concerns ?? null,
+      comments: input.comments ?? null,
+    }),
+    db
+      .update(interviews)
+      .set({ status: 'completed', updatedAt: nowIso() })
+      .where(eq(interviews.id, interviewId)),
+  ]);
   const [row] = await db
     .select()
     .from(interviewScorecards)
