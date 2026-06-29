@@ -65,7 +65,7 @@ export function OrgChartPage() {
     const acc = new Set<string>();
     const walk = (list: OrgNode[], depth: number) => {
       for (const node of list) {
-        if (depth < 1) acc.add(node.id);
+        if (depth < 2) acc.add(node.id);
         walk(node.reports, depth + 1);
       }
     };
