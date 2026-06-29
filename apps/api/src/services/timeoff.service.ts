@@ -72,6 +72,7 @@ export async function listRequests(
 ): Promise<TimeOffRequest[]> {
   const filters = [];
   if (params.employeeId) filters.push(eq(timeOffRequests.employeeId, params.employeeId));
+  if (params.approverId) filters.push(eq(timeOffRequests.approverId, params.approverId));
   if (params.status) filters.push(eq(timeOffRequests.status, params.status));
   if (params.scopeEmployeeIds) {
     if (params.scopeEmployeeIds.length === 0) return [];

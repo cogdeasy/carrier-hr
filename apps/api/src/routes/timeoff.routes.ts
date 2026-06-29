@@ -2,7 +2,6 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { createTimeOffSchema, decideTimeOffSchema, hasPermission } from '@carrier-hr/shared';
 import { parse } from '../lib/validate.js';
-import { listDirectReports } from '../services/employee.service.js';
 import {
   cancelRequest,
   createRequest,
@@ -37,16 +36,19 @@ export async function timeOffRoutes(app: FastifyInstance): Promise<void> {
     return cancelRequest(app.db, req.principal.employeeId, id);
   });
 
-  // Manager / HR approval queue.
+  // Manager / HR approval queue. Non-admins see exactly the requests they are
+  // the assigned approver for, which keeps the queue consistent with the
+  // authorization check in decideRequest (both key off approverId) — scoping by
+  // current direct reports could otherwise hide a request whose approver was set
+  // at submission time.
   app.get('/approvals', { onRequest: [app.requirePermission('timeoff:approve')] }, async (req) => {
     const isAdmin = hasPermission(req.principal.roles, 'timeoff:admin');
     if (isAdmin) {
       return listRequests(app.db, { status: 'pending' });
     }
-    const reports = await listDirectReports(app.db, req.principal.employeeId);
     return listRequests(app.db, {
       status: 'pending',
-      scopeEmployeeIds: reports.map((r) => r.id),
+      approverId: req.principal.employeeId,
     });
   });
 

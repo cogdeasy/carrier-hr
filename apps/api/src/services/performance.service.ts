@@ -139,6 +139,12 @@ export async function submitSelfReview(
   const [row] = await db.select().from(reviews).where(eq(reviews.id, id)).limit(1);
   if (!row) throw NotFound('Review not found');
   if (row.employeeId !== employeeId) throw Forbidden('This is not your review');
+  // A self-assessment may only be (re)submitted while the review is still in an
+  // employee-owned stage. Once it has advanced to manager review or completed,
+  // re-submitting would silently regress a finalized review.
+  if (row.status !== 'not_started' && row.status !== 'self_review') {
+    throw BadRequest('Self-assessment can no longer be submitted for this review');
+  }
   await db
     .update(reviews)
     .set({ selfAssessment: input.selfAssessment, status: 'manager_review', updatedAt: nowIso() })
@@ -163,6 +169,10 @@ export async function submitManagerReview(
   if (!row) throw NotFound('Review not found');
   if (row.reviewerId !== reviewerId) throw Forbidden('You are not the reviewer');
   if (!row.selfAssessment) throw BadRequest('Employee has not submitted a self-assessment yet');
+  // Block overwriting a finalized review; completed reviews are immutable.
+  if (row.status === 'completed') {
+    throw BadRequest('This review has already been completed');
+  }
   await db
     .update(reviews)
     .set({
