@@ -363,7 +363,13 @@ export async function decideRequest(
     if (!reserved) {
       await db
         .update(timeOffRequests)
-        .set({ status: 'pending', decisionNote: null, decidedAt: null, updatedAt: nowIso() })
+        .set({
+          status: 'pending',
+          approverId: row.approverId,
+          decisionNote: null,
+          decidedAt: null,
+          updatedAt: nowIso(),
+        })
         .where(eq(timeOffRequests.id, requestId));
       throw await overdraftError(db, row.employeeId, row.type as TimeOffType, yearOf(row.startDate), row.totalDays);
     }
@@ -582,18 +588,17 @@ export async function runCarryover(
 }
 
 /**
- * The set of employees a viewer may see leave for: HR/admins see everyone,
- * managers see their direct reports plus themselves, everyone else sees only
- * their own.
+ * The set of employees a viewer may see leave for: HR/admins see everyone
+ * (`null`, i.e. no employee filter), managers see their direct reports plus
+ * themselves, everyone else sees only their own.
  */
 export async function calendarScope(
   db: Database,
   employeeId: string,
   roles: Role[],
-): Promise<string[]> {
+): Promise<string[] | null> {
   if (hasPermission(roles, 'timeoff:read')) {
-    const rows = await db.select({ id: employees.id }).from(employees);
-    return rows.map((r) => r.id);
+    return null;
   }
   if (hasPermission(roles, 'timeoff:read:team')) {
     const reports = await db
@@ -607,17 +612,19 @@ export async function calendarScope(
 
 export async function getTeamCalendar(
   db: Database,
-  scopeEmployeeIds: string[],
+  scopeEmployeeIds: string[] | null,
   from: string,
   to: string,
 ): Promise<TimeOffRequest[]> {
-  if (scopeEmployeeIds.length === 0) return [];
+  if (scopeEmployeeIds !== null && scopeEmployeeIds.length === 0) return [];
   const rows = await db
     .select()
     .from(timeOffRequests)
     .where(
       and(
-        inArray(timeOffRequests.employeeId, scopeEmployeeIds),
+        // A null scope means an unrestricted viewer (HR/admin), so skip the
+        // employee filter rather than enumerating every employee id.
+        scopeEmployeeIds === null ? undefined : inArray(timeOffRequests.employeeId, scopeEmployeeIds),
         inArray(timeOffRequests.status, [...ACTIVE_STATUSES]),
         lte(timeOffRequests.startDate, to),
         gte(timeOffRequests.endDate, from),
