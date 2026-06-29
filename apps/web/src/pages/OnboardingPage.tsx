@@ -596,11 +596,18 @@ function InstantiateModal({
   const [employeeId, setEmployeeId] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [date, setDate] = useState('');
+  const [empSearch, setEmpSearch] = useState('');
 
   const { data: employees } = useQuery({
-    queryKey: ['employees', 'picker'],
-    queryFn: () => api.get<Paginated<Employee>>('/employees', { pageSize: 100 }),
+    queryKey: ['employees', 'picker', empSearch],
+    queryFn: () =>
+      api.get<Paginated<Employee>>('/employees', {
+        pageSize: 100,
+        search: empSearch || undefined,
+      }),
   });
+  const employeeOptions = employees?.data ?? [];
+  const employeeOverflow = (employees?.total ?? 0) > employeeOptions.length;
   const { data: templates } = useQuery({
     queryKey: ['onboarding', 'templates', mode],
     queryFn: () =>
@@ -641,14 +648,33 @@ function InstantiateModal({
     >
       <div className="space-y-3">
         <Field label="Employee" htmlFor="inst-emp">
-          <Select id="inst-emp" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
-            <option value="">Select an employee…</option>
-            {employees?.data.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.displayName} · {e.jobTitle}
-              </option>
-            ))}
-          </Select>
+          <div className="space-y-2">
+            <Input
+              id="inst-emp-search"
+              type="search"
+              placeholder="Search by name, title, email…"
+              value={empSearch}
+              onChange={(e) => {
+                setEmpSearch(e.target.value);
+                setEmployeeId('');
+              }}
+              aria-label="Search employees"
+            />
+            <Select id="inst-emp" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
+              <option value="">Select an employee…</option>
+              {employeeOptions.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.displayName} · {e.jobTitle}
+                </option>
+              ))}
+            </Select>
+            {employeeOverflow ? (
+              <p className="text-xs text-slate-500">
+                Showing the first {employeeOptions.length} of {employees?.total} employees — refine your search to
+                narrow the list.
+              </p>
+            ) : null}
+          </div>
         </Field>
         <Field label={offboard ? 'Template (optional — defaults to standard)' : 'Template'} htmlFor="inst-tpl">
           <Select id="inst-tpl" value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
