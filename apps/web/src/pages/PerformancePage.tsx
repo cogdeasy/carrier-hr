@@ -40,9 +40,15 @@ const isTab = (v: string | null): v is Tab => v != null && (TABS as readonly str
 
 export function PerformancePage() {
   const { user, can } = useAuth();
-  const [params] = useSearchParams();
-  const initialTab = isTab(params.get('tab')) ? (params.get('tab') as Tab) : 'goals';
-  const [tab, setTab] = useState<Tab>(initialTab);
+  const [params, setParams] = useSearchParams();
+  // Derive the active tab from the URL so notification deep-links (?tab=reviews)
+  // switch tabs even when the page is already mounted.
+  const tab: Tab = isTab(params.get('tab')) ? (params.get('tab') as Tab) : 'goals';
+  const setTab = (next: Tab) => {
+    const p = new URLSearchParams(params);
+    p.set('tab', next);
+    setParams(p, { replace: true });
+  };
   const canReviewTeam = can('performance:read:team');
   const isHr = can('performance:admin');
 
