@@ -1,4 +1,5 @@
 import type { Role } from '@collins-hr/shared';
+import { DEFAULT_TIME_OFF_POLICIES } from '@collins-hr/shared';
 import { getEnv } from '../env.js';
 import { hashPassword } from '../auth/password.js';
 import { businessDaysBetween } from '../lib/dates.js';
@@ -284,6 +285,11 @@ async function seedSupporting(db: Database): Promise<void> {
   // Holidays
   for (const h of HOLIDAYS_2026) {
     await db.insert(t.companyHolidays).values({ id: createId('hol'), name: h.name, date: h.date, region: 'US' });
+  }
+
+  // Time-off policies (per-type accrual, carryover cap & approval rules)
+  for (const p of DEFAULT_TIME_OFF_POLICIES) {
+    await db.insert(t.timeOffPolicies).values({ id: createId('top'), ...p });
   }
 
   // Benefit plans
