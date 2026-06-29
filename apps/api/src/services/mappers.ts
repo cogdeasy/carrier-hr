@@ -12,6 +12,7 @@ import type {
   JobRequisition,
   Notification,
   OnboardingTask,
+  PayRun,
   Payslip,
   PayslipLine,
   Review,
@@ -131,7 +132,10 @@ export function toTimesheet(
   };
 }
 
-export function toPayslip(row: InferSelectModel<typeof schema.payslips>): Payslip {
+export function toPayslip(
+  row: InferSelectModel<typeof schema.payslips>,
+  relations: { employee?: EmployeeRef } = {},
+): Payslip {
   return {
     id: row.id,
     employeeId: row.employeeId,
@@ -139,14 +143,41 @@ export function toPayslip(row: InferSelectModel<typeof schema.payslips>): Paysli
     periodEnd: row.periodEnd,
     payDate: row.payDate,
     status: row.status as Payslip['status'],
+    frequency: row.frequency as Payslip['frequency'],
     currency: row.currency,
     grossCents: row.grossCents,
     netCents: row.netCents,
     totalDeductionsCents: row.totalDeductionsCents,
     totalTaxCents: row.totalTaxCents,
+    totalContributionsCents: row.totalContributionsCents,
+    payRunId: row.payRunId,
     lines: parseJson<PayslipLine[]>(row.lines) ?? [],
     createdAt: row.createdAt,
+    ...(relations.employee ? { employee: relations.employee } : {}),
   };
+}
+
+export function toPayRun(row: InferSelectModel<typeof schema.payRuns>, totals: PayRunTotals): PayRun {
+  return {
+    id: row.id,
+    periodStart: row.periodStart,
+    periodEnd: row.periodEnd,
+    payDate: row.payDate,
+    frequency: row.frequency as PayRun['frequency'],
+    status: row.status as PayRun['status'],
+    currency: row.currency,
+    payslipCount: totals.payslipCount,
+    totalGrossCents: totals.totalGrossCents,
+    totalNetCents: totals.totalNetCents,
+    createdById: row.createdById,
+    createdAt: row.createdAt,
+  };
+}
+
+export interface PayRunTotals {
+  payslipCount: number;
+  totalGrossCents: number;
+  totalNetCents: number;
 }
 
 export function toBenefitEnrollment(
