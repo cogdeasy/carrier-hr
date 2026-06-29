@@ -441,6 +441,46 @@ async function seedSupporting(db: Database): Promise<void> {
     });
   }
 
+  // 1:1 meetings between managers and their reports, with shared agenda/notes
+  // and a couple of follow-up action items.
+  for (const e of active) {
+    if (!e.managerId) continue;
+    if (rand() < 0.5) continue;
+    const past = rand() < 0.5;
+    const meetingId = createId('oneon');
+    const scheduledFor = new Date();
+    scheduledFor.setUTCDate(scheduledFor.getUTCDate() + (past ? -randInt(3, 21) : randInt(2, 14)));
+    scheduledFor.setUTCHours(15, 0, 0, 0);
+    await db.insert(t.oneOnOnes).values({
+      id: meetingId,
+      managerId: e.managerId,
+      employeeId: e.id,
+      scheduledFor: scheduledFor.toISOString(),
+      agenda: pick([
+        'Career growth and current blockers',
+        'Project status and priorities for the week',
+        'Feedback on recent deliverables',
+        'Wellbeing check-in and workload balance',
+      ]),
+      notes: past ? 'Discussed progress and agreed on next steps.' : null,
+      completed: past,
+    });
+    for (let a = 0; a < randInt(0, 2); a += 1) {
+      await db.insert(t.oneOnOneActionItems).values({
+        id: createId('aitem'),
+        oneOnOneId: meetingId,
+        title: pick([
+          'Share design doc with the team',
+          'Schedule pairing session',
+          'Draft growth plan for next quarter',
+          'Follow up with stakeholders',
+        ]),
+        assigneeId: pick([e.id, e.managerId]),
+        completed: past && rand() < 0.5,
+      });
+    }
+  }
+
   // Time-off requests (pending ones routed to managers for approval testing)
   for (const e of active) {
     if (!e.managerId) continue;
