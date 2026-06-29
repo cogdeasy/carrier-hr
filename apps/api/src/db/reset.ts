@@ -3,6 +3,7 @@ import { getClient } from './client.js';
 const TABLES = [
   'audit_logs',
   'notifications',
+  'document_signatures',
   'documents',
   'course_enrollments',
   'courses',

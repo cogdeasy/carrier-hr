@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { timeOffBalances } from '../db/schema.js';
+import { employees, timeOffBalances } from '../db/schema.js';
 import { createId } from '../lib/ids.js';
 import {
   authHeader,
@@ -111,5 +111,43 @@ describe('time-off approval workflow', () => {
       payload: { decision: 'approved' },
     });
     expect(res.statusCode).toBe(403);
+  });
+
+  it('prevents an approver from approving their own request even with approve permission', async () => {
+    // A manager who is their own manager becomes the approver of their own
+    // request, so this exercises the self-approval guard in decideRequest
+    // rather than the route permission check.
+    const year = new Date().getUTCFullYear();
+    const selfMgr = await seedUser(ctx.db, { email: 'selfmgr@carrier.com', roles: ['manager'] });
+    await ctx.db
+      .update(employees)
+      .set({ managerId: selfMgr.employeeId })
+      .where(eq(employees.id, selfMgr.employeeId));
+    await ctx.db.insert(timeOffBalances).values({
+      id: createId('tob'),
+      employeeId: selfMgr.employeeId,
+      type: 'vacation',
+      accruedDays: 10,
+      usedDays: 0,
+      year,
+    });
+    const token = await login(ctx.app, 'selfmgr@carrier.com');
+    const created = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/time-off/requests',
+      headers: authHeader(token),
+      payload: { type: 'vacation', startDate: `${year}-10-01`, endDate: `${year}-10-02` },
+    });
+    expect(created.statusCode).toBe(201);
+    const requestId = created.json().id as string;
+
+    const res = await ctx.app.inject({
+      method: 'POST',
+      url: `/api/time-off/requests/${requestId}/decision`,
+      headers: authHeader(token),
+      payload: { decision: 'approved' },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error.message).toContain('your own');
   });
 });

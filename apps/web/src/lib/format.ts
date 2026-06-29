@@ -18,16 +18,28 @@ export function formatCents(cents: number): string {
   return currencyCentsFmt.format(cents / 100);
 }
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Parses a value into a Date. Date-only strings (`YYYY-MM-DD`) are anchored to
+ * local noon so they never roll back to the previous calendar day when rendered
+ * in a UTC-negative timezone (a midnight-UTC instant would).
+ */
+function toDate(value: string | Date): Date {
+  if (typeof value !== 'string') return value;
+  return new Date(DATE_ONLY.test(value) ? `${value}T12:00:00` : value);
+}
+
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '—';
-  const date = typeof value === 'string' ? new Date(value) : value;
+  const date = toDate(value);
   if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 export function formatDateTime(value: string | Date | null | undefined): string {
   if (!value) return '—';
-  const date = typeof value === 'string' ? new Date(value) : value;
+  const date = toDate(value);
   if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleString('en-US', {
     year: 'numeric',
@@ -54,7 +66,7 @@ export function formatDuration(minutes: number): string {
 
 export function relativeDays(dateStr: string): string {
   const now = new Date();
-  const target = new Date(dateStr);
+  const target = toDate(dateStr);
   const diff = Math.round((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Tomorrow';

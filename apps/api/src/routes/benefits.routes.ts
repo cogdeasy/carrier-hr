@@ -14,6 +14,9 @@ export async function benefitsRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/enrollments', async (req) => listEnrollments(app.db, req.principal.employeeId));
 
+  // Benefits enrollment is self-service: the target employee is always the
+  // authenticated principal (never a value from the request body), so a user
+  // can only ever create or change their own enrollment.
   app.post('/enrollments', async (req) => {
     const input = parse(enrollBenefitSchema, req.body);
     return enroll(app.db, req.principal.employeeId, input);

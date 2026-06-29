@@ -7,11 +7,24 @@ export const loginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
+/**
+ * Strong-password policy: 8-128 chars with at least one lowercase letter, one
+ * uppercase letter, and one digit. Shared so the API and web client validate
+ * identically.
+ */
+export const strongPassword = z
+  .string()
+  .min(8)
+  .max(128)
+  .regex(/[a-z]/, 'Must include a lowercase letter')
+  .regex(/[A-Z]/, 'Must include an uppercase letter')
+  .regex(/[0-9]/, 'Must include a number');
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1),
-    newPassword: z.string().min(8).max(128),
-    confirmPassword: z.string().min(8).max(128),
+    newPassword: strongPassword,
+    confirmPassword: z.string().min(1),
   })
   .refine((v) => v.newPassword === v.confirmPassword, {
     message: 'Passwords do not match',

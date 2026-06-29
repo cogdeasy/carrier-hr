@@ -13,6 +13,8 @@ import { Conflict, NotFound } from '../lib/errors.js';
 import { createId } from '../lib/ids.js';
 import { offset, paginate } from '../lib/pagination.js';
 import { nowIso } from '../lib/dates.js';
+import { hashPassword } from '../auth/password.js';
+import { getEnv } from '../env.js';
 import { toEmployee, toEmployeeRef, displayName } from './mappers.js';
 import { rolesByEmployee, rolesForEmployee } from './roles.service.js';
 
@@ -104,6 +106,7 @@ export async function createEmployee(
   const id = createId('emp');
   const now = nowIso();
   const maxAttempts = 5;
+  let created = false;
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const employeeNumber = await nextEmployeeNumber(db);
     try {
@@ -125,13 +128,31 @@ export async function createEmployee(
         createdAt: now,
         updatedAt: now,
       });
-      return getEmployee(db, id);
+      created = true;
+      break;
     } catch (err) {
       if (isUniqueViolation(err) && attempt < maxAttempts - 1) continue;
       throw err;
     }
   }
-  throw Conflict('Could not allocate a unique employee number, please retry');
+  if (!created) throw Conflict('Could not allocate a unique employee number, please retry');
+
+  // Provision a login so the new hire can sign in. They receive a temporary
+  // password and are forced to change it on first login.
+  const roles: Role[] = input.roles.length ? input.roles : ['employee'];
+  const userId = createId('usr');
+  await db.insert(users).values({
+    id: userId,
+    employeeId: id,
+    email: input.email,
+    passwordHash: await hashPassword(getEnv().SEED_DEFAULT_PASSWORD),
+    mustChangePassword: true,
+  });
+  for (const role of roles) {
+    await db.insert(userRoles).values({ id: createId('rol'), userId, role });
+  }
+
+  return getEmployee(db, id);
 }
 
 export async function updateEmployee(

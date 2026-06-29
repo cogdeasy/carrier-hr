@@ -68,7 +68,10 @@ jobs:
         run: pnpm --filter @carrier-hr/shared build
 
       - name: Build web app
+        # Demo account quick-fill panel is required by the e2e auth flow.
         run: pnpm --filter @carrier-hr/web build
+        env:
+          VITE_DEMO_MODE: 'true'
 
       - name: Prepare database
         working-directory: apps/api

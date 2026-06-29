@@ -4,7 +4,7 @@ import { parse } from '../lib/validate.js';
 import { authenticate, changePassword, getSessionByUserId } from '../services/auth.service.js';
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/login', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (req, reply) => {
+  app.post('/login', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
     const input = parse(loginSchema, req.body);
     const result = await authenticate(app.db, { ...input, email: input.email.toLowerCase() });
     const token = app.jwt.sign({

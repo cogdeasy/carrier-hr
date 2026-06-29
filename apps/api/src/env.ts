@@ -49,6 +49,12 @@ export function getEnv(): Env {
     throw new Error('Invalid environment configuration');
   }
   cached = parsed.data;
+  if (cached.NODE_ENV !== 'production' && cached.JWT_SECRET === DEFAULT_JWT_SECRET) {
+    console.warn(
+      `[env] WARNING: using the built-in development JWT secret (NODE_ENV=${cached.NODE_ENV}). ` +
+        'Set JWT_SECRET to a strong, unique value before exposing this server to any network.',
+    );
+  }
   return cached;
 }
 

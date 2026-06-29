@@ -18,6 +18,11 @@ const DEMO_ACCOUNTS = [
   { label: 'Executive', email: 'david.gitlin@carrier.com' },
 ];
 
+// The demo account quick-fill panel is only rendered when VITE_DEMO_MODE is
+// explicitly enabled, so production builds never expose seed credentials.
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD ?? 'Password123!';
+
 export function LoginPage() {
   const { login, status } = useAuth();
   const location = useLocation();
@@ -101,27 +106,31 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Demo accounts
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {DEMO_ACCOUNTS.map((acct) => (
-                <button
-                  key={acct.email}
-                  type="button"
-                  onClick={() => {
-                    setEmail(acct.email);
-                    setPassword('Password123!');
-                  }}
-                  className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-carrier-300 hover:text-carrier-700"
-                >
-                  {acct.label}
-                </button>
-              ))}
+          {DEMO_MODE ? (
+            <div className="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Demo accounts
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {DEMO_ACCOUNTS.map((acct) => (
+                  <button
+                    key={acct.email}
+                    type="button"
+                    onClick={() => {
+                      setEmail(acct.email);
+                      setPassword(DEMO_PASSWORD);
+                    }}
+                    className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-carrier-300 hover:text-carrier-700"
+                  >
+                    {acct.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-slate-400">
+                Password for all demo accounts: {DEMO_PASSWORD}
+              </p>
             </div>
-            <p className="mt-2 text-xs text-slate-400">Password for all demo accounts: Password123!</p>
-          </div>
+          ) : null}
         </div>
       </div>
     </div>
