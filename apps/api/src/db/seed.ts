@@ -570,41 +570,112 @@ async function seedSupporting(db: Database): Promise<void> {
     }
   }
 
-  // Recruiting: jobs + candidates
+  // Recruiting: jobs + candidates + pipeline history, interviews & offers
   const recruiter = employees.find((e) => e.email === 'recruiter@collins.com')!;
+  const hiringManager = employees.find((e) => e.email === 'manager@collins.com')!;
+  const hrAdmin = employees.find((e) => e.email === 'hr.admin@collins.com')!;
+  const interviewers = active.filter((e) => e.department === 'Engineering').slice(0, 6);
   for (let j = 0; j < 8; j += 1) {
     const dept = pick(DEPARTMENTS.filter((d) => d !== 'Executive'));
     const titles = TITLES_BY_DEPARTMENT[dept] ?? ['Specialist'];
     const jobId = createId('job');
     const min = randInt(60, 120) * 1000;
+    const status = pick(['open', 'open', 'open', 'draft', 'on_hold', 'closed']);
+    const posted = status === 'draft' ? null : daysAgo(randInt(3, 45));
+    const approved = status === 'open' || status === 'on_hold';
     await db.insert(t.jobRequisitions).values({
       id: jobId,
       title: pick(titles),
       department: dept,
+      division: divisionForDepartment(dept, j),
       location: pick(LOCATIONS),
       employmentType: 'full_time',
-      status: pick(['open', 'open', 'draft', 'closed']),
-      description: 'We are seeking a talented professional to join our growing team at Collins Aerospace.',
+      status,
+      description:
+        'We are seeking a talented professional to join our growing team at Collins Aerospace.',
       recruiterId: recruiter.id,
+      hiringManagerId: j % 2 === 0 ? hiringManager.id : null,
       openings: randInt(1, 3),
-      postedDate: daysAgo(randInt(3, 45)),
+      postedDate: posted,
+      approvedById: approved ? hrAdmin.id : null,
+      approvedAt: approved ? daysAgo(randInt(3, 45)) + 'T12:00:00.000Z' : null,
+      closedAt: status === 'closed' ? daysAgo(randInt(1, 10)) + 'T12:00:00.000Z' : null,
       salaryMinCents: min * 100,
       salaryMaxCents: (min + randInt(20, 60) * 1000) * 100,
     });
     for (let c = 0; c < randInt(2, 8); c += 1) {
       const first = pick(FIRST_NAMES);
       const last = pick(LAST_NAMES);
+      const candId = createId('cand');
+      const stage = pick(['applied', 'applied', 'screening', 'interview', 'offer']);
+      const appliedAt = daysAgo(randInt(2, 40)) + 'T09:00:00.000Z';
       await db.insert(t.candidates).values({
-        id: createId('cand'),
+        id: candId,
         jobId,
         firstName: first,
         lastName: last,
         email: makeEmail(`${first}.cand${c}${j}`, last),
         phone: `+1-555-555-${String(randInt(1000, 9999))}`,
-        stage: pick(['applied', 'applied', 'screening', 'interview', 'offer']),
+        stage,
         source: pick(['LinkedIn', 'Referral', 'Career Site', 'Indeed']),
         rating: rand() < 0.5 ? randInt(2, 5) : null,
+        appliedAt,
       });
+      // Stage history reflecting the candidate's progress through the pipeline.
+      const journey = ['applied', 'screening', 'interview', 'offer'];
+      const reached = journey.slice(0, journey.indexOf(stage) + 1);
+      let prev: string | null = null;
+      for (const s of reached) {
+        await db.insert(t.candidateStageEvents).values({
+          id: createId('cse'),
+          candidateId: candId,
+          fromStage: prev,
+          toStage: s,
+          note: prev ? null : 'Application received',
+          changedById: recruiter.id,
+          createdAt: appliedAt,
+        });
+        prev = s;
+      }
+      // Past interview + scorecard for anyone who reached the interview stage.
+      if ((stage === 'interview' || stage === 'offer') && interviewers.length > 0) {
+        const interviewer = pick(interviewers);
+        const intvId = createId('intv');
+        await db.insert(t.interviews).values({
+          id: intvId,
+          candidateId: candId,
+          jobId,
+          interviewerId: interviewer.id,
+          scheduledAt: daysAgo(randInt(1, 8)) + 'T15:00:00.000Z',
+          durationMinutes: 60,
+          mode: pick(['video', 'onsite', 'phone']),
+          stage: 'interview',
+          status: 'completed',
+        });
+        await db.insert(t.interviewScorecards).values({
+          id: createId('scr'),
+          interviewId: intvId,
+          candidateId: candId,
+          interviewerId: interviewer.id,
+          rating: randInt(3, 5),
+          recommendation: pick(['strong_yes', 'yes', 'no']),
+          strengths: 'Strong systems-engineering fundamentals.',
+          concerns: rand() < 0.5 ? 'Limited avionics domain exposure.' : null,
+        });
+      }
+      // Draft offer for candidates sitting in the offer stage.
+      if (stage === 'offer') {
+        await db.insert(t.offers).values({
+          id: createId('ofr'),
+          candidateId: candId,
+          jobId,
+          salaryCents: (min + randInt(5, 30) * 1000) * 100,
+          startDate: daysAgo(-randInt(14, 45)),
+          status: pick(['draft', 'extended']),
+          expiresAt: daysAgo(-randInt(7, 14)),
+          extendedById: recruiter.id,
+        });
+      }
     }
   }
 

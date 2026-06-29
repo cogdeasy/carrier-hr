@@ -328,12 +328,13 @@ export function toOneOnOne(
 
 export function toJob(
   row: InferSelectModel<typeof schema.jobRequisitions>,
-  candidateCount?: number,
+  counts?: { candidateCount?: number; activeCandidateCount?: number },
 ): JobRequisition {
   return {
     id: row.id,
     title: row.title,
     department: row.department,
+    division: row.division,
     location: row.location,
     employmentType: row.employmentType,
     status: row.status as JobRequisition['status'],
@@ -341,10 +342,15 @@ export function toJob(
     hiringManagerId: row.hiringManagerId,
     recruiterId: row.recruiterId,
     openings: row.openings,
+    filledCount: row.filledCount,
     postedDate: row.postedDate,
+    closedAt: row.closedAt,
+    approvedById: row.approvedById,
+    approvedAt: row.approvedAt,
     salaryMinCents: row.salaryMinCents,
     salaryMaxCents: row.salaryMaxCents,
-    candidateCount,
+    candidateCount: counts?.candidateCount,
+    activeCandidateCount: counts?.activeCandidateCount,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

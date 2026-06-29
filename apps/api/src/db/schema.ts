@@ -459,6 +459,7 @@ export const jobRequisitions = sqliteTable(
     id: text('id').primaryKey(),
     title: text('title').notNull(),
     department: text('department').notNull(),
+    division: text('division'),
     location: text('location').notNull(),
     employmentType: text('employment_type').notNull().default('full_time'),
     status: text('status').notNull().default('draft'),
@@ -466,7 +467,11 @@ export const jobRequisitions = sqliteTable(
     hiringManagerId: text('hiring_manager_id').references(() => employees.id),
     recruiterId: text('recruiter_id').references(() => employees.id),
     openings: integer('openings').notNull().default(1),
+    filledCount: integer('filled_count').notNull().default(0),
     postedDate: text('posted_date'),
+    closedAt: text('closed_at'),
+    approvedById: text('approved_by_id').references(() => employees.id),
+    approvedAt: text('approved_at'),
     salaryMinCents: integer('salary_min_cents'),
     salaryMaxCents: integer('salary_max_cents'),
     ...timestamps,
@@ -501,6 +506,105 @@ export const candidates = sqliteTable(
   },
   (t) => ({
     jobIdx: index('candidates_job_idx').on(t.jobId),
+  }),
+);
+
+export const candidateStageEvents = sqliteTable(
+  'candidate_stage_events',
+  {
+    id: text('id').primaryKey(),
+    candidateId: text('candidate_id')
+      .notNull()
+      .references(() => candidates.id, { onDelete: 'cascade' }),
+    fromStage: text('from_stage'),
+    toStage: text('to_stage').notNull(),
+    note: text('note'),
+    changedById: text('changed_by_id').references(() => employees.id),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  (t) => ({
+    candidateIdx: index('candidate_stage_events_candidate_idx').on(t.candidateId),
+  }),
+);
+
+export const interviews = sqliteTable(
+  'interviews',
+  {
+    id: text('id').primaryKey(),
+    candidateId: text('candidate_id')
+      .notNull()
+      .references(() => candidates.id, { onDelete: 'cascade' }),
+    jobId: text('job_id')
+      .notNull()
+      .references(() => jobRequisitions.id, { onDelete: 'cascade' }),
+    interviewerId: text('interviewer_id')
+      .notNull()
+      .references(() => employees.id),
+    scheduledAt: text('scheduled_at').notNull(),
+    durationMinutes: integer('duration_minutes').notNull().default(60),
+    mode: text('mode').notNull().default('video'),
+    stage: text('stage').notNull().default('interview'),
+    location: text('location'),
+    status: text('status').notNull().default('scheduled'),
+    ...timestamps,
+  },
+  (t) => ({
+    candidateIdx: index('interviews_candidate_idx').on(t.candidateId),
+    interviewerIdx: index('interviews_interviewer_idx').on(t.interviewerId),
+  }),
+);
+
+export const interviewScorecards = sqliteTable(
+  'interview_scorecards',
+  {
+    id: text('id').primaryKey(),
+    interviewId: text('interview_id')
+      .notNull()
+      .references(() => interviews.id, { onDelete: 'cascade' }),
+    candidateId: text('candidate_id')
+      .notNull()
+      .references(() => candidates.id, { onDelete: 'cascade' }),
+    interviewerId: text('interviewer_id')
+      .notNull()
+      .references(() => employees.id),
+    rating: integer('rating').notNull(),
+    recommendation: text('recommendation').notNull(),
+    strengths: text('strengths'),
+    concerns: text('concerns'),
+    comments: text('comments'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  (t) => ({
+    interviewIdx: uniqueIndex('interview_scorecards_interview_idx').on(t.interviewId),
+    candidateIdx: index('interview_scorecards_candidate_idx').on(t.candidateId),
+  }),
+);
+
+export const offers = sqliteTable(
+  'offers',
+  {
+    id: text('id').primaryKey(),
+    candidateId: text('candidate_id')
+      .notNull()
+      .references(() => candidates.id, { onDelete: 'cascade' }),
+    jobId: text('job_id')
+      .notNull()
+      .references(() => jobRequisitions.id, { onDelete: 'cascade' }),
+    salaryCents: integer('salary_cents').notNull(),
+    startDate: text('start_date').notNull(),
+    status: text('status').notNull().default('draft'),
+    expiresAt: text('expires_at'),
+    notes: text('notes'),
+    extendedById: text('extended_by_id').references(() => employees.id),
+    decidedAt: text('decided_at'),
+    ...timestamps,
+  },
+  (t) => ({
+    candidateIdx: index('offers_candidate_idx').on(t.candidateId),
   }),
 );
 

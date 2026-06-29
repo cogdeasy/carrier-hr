@@ -119,6 +119,7 @@ const MANAGER_PERMISSIONS: Permission[] = [
   'analytics:read:team',
   'learning:read:team',
   'learning:assign',
+  'recruiting:read',
 ];
 
 const RECRUITER_PERMISSIONS: Permission[] = [
