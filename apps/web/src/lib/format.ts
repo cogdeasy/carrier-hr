@@ -44,6 +44,14 @@ export function titleCase(value: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Formats a minute count as "45m", "1h", or "1h 30m". */
+export function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const rem = minutes % 60;
+  return rem === 0 ? `${hours}h` : `${hours}h ${rem}m`;
+}
+
 export function relativeDays(dateStr: string): string {
   const now = new Date();
   const target = new Date(dateStr);

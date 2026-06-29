@@ -157,6 +157,9 @@ export async function decideRequest(
   if (!options.isAdmin && row.approverId !== approverId) {
     throw Forbidden('You are not the approver for this request');
   }
+  if (!options.isAdmin && row.employeeId === approverId) {
+    throw Forbidden('You cannot approve your own time-off request');
+  }
 
   const status = input.decision;
   await db

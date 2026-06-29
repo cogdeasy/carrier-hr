@@ -70,7 +70,9 @@ export async function saveTimesheet(
   input: SaveTimesheetInput,
 ): Promise<Timesheet> {
   const sheet = await getOrCreateWeek(db, employeeId, input.weekStarting);
-  if (sheet.status === 'approved') throw BadRequest('Approved timesheets cannot be edited');
+  if (sheet.status === 'approved' || sheet.status === 'submitted') {
+    throw BadRequest('Only draft or rejected timesheets can be edited');
+  }
 
   await db.delete(timesheetEntries).where(eq(timesheetEntries.timesheetId, sheet.id));
   for (const entry of input.entries) {

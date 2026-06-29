@@ -1,13 +1,4 @@
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  like,
-  or,
-  type SQL,
-} from 'drizzle-orm';
+import { and, asc, count, desc, eq, or, sql, type SQL } from 'drizzle-orm';
 import type {
   CreateEmployeeInput,
   Employee,
@@ -40,14 +31,16 @@ export async function listEmployees(
 ): Promise<Paginated<Employee>> {
   const filters: SQL[] = [];
   if (params.search) {
-    const term = `%${params.search.toLowerCase()}%`;
-    const searchClause = or(
-      like(employees.firstName, term),
-      like(employees.lastName, term),
-      like(employees.email, term),
-      like(employees.jobTitle, term),
-      like(employees.department, term),
-    );
+    const escaped = params.search.toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`);
+    const term = `%${escaped}%`;
+    const columns = [
+      employees.firstName,
+      employees.lastName,
+      employees.email,
+      employees.jobTitle,
+      employees.department,
+    ];
+    const searchClause = or(...columns.map((col) => sql`lower(${col}) like ${term} escape '\\'`));
     if (searchClause) filters.push(searchClause);
   }
   if (params.department) filters.push(eq(employees.department, params.department));
@@ -83,9 +76,18 @@ export async function getEmployee(db: Database, id: string): Promise<Employee> {
 }
 
 async function nextEmployeeNumber(db: Database): Promise<string> {
-  const rows = await db.select({ value: count() }).from(employees);
-  const n = (rows[0]?.value ?? 0) + 1001;
-  return `C${n}`;
+  const rows = await db.select({ number: employees.employeeNumber }).from(employees);
+  let maxN = 1000;
+  for (const r of rows) {
+    const match = /^C(\d+)$/.exec(r.number);
+    if (match) maxN = Math.max(maxN, Number(match[1]));
+  }
+  return `C${maxN + 1}`;
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /UNIQUE constraint failed|SQLITE_CONSTRAINT/i.test(message);
 }
 
 export async function createEmployee(
@@ -100,28 +102,36 @@ export async function createEmployee(
   if (existing) throw Conflict('An employee with this email already exists');
 
   const id = createId('emp');
-  const employeeNumber = await nextEmployeeNumber(db);
   const now = nowIso();
-  await db.insert(employees).values({
-    id,
-    employeeNumber,
-    firstName: input.firstName,
-    lastName: input.lastName,
-    email: input.email,
-    workPhone: input.workPhone ?? null,
-    jobTitle: input.jobTitle,
-    department: input.department,
-    division: input.division,
-    location: input.location,
-    employmentType: input.employmentType,
-    status: 'active',
-    managerId: input.managerId ?? null,
-    hireDate: input.hireDate,
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  return getEmployee(db, id);
+  const maxAttempts = 5;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const employeeNumber = await nextEmployeeNumber(db);
+    try {
+      await db.insert(employees).values({
+        id,
+        employeeNumber,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        workPhone: input.workPhone ?? null,
+        jobTitle: input.jobTitle,
+        department: input.department,
+        division: input.division,
+        location: input.location,
+        employmentType: input.employmentType,
+        status: 'active',
+        managerId: input.managerId ?? null,
+        hireDate: input.hireDate,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return getEmployee(db, id);
+    } catch (err) {
+      if (isUniqueViolation(err) && attempt < maxAttempts - 1) continue;
+      throw err;
+    }
+  }
+  throw Conflict('Could not allocate a unique employee number, please retry');
 }
 
 export async function updateEmployee(

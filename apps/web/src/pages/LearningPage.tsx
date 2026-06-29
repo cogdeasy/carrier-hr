@@ -7,7 +7,7 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { PageHeader } from '../components/ui/PageHeader';
 import { LoadingPage } from '../components/ui/Spinner';
 import { api } from '../lib/api';
-import { titleCase } from '../lib/format';
+import { formatDuration, titleCase } from '../lib/format';
 
 export function LearningPage() {
   const qc = useQueryClient();
@@ -52,7 +52,7 @@ export function LearningPage() {
             <Card key={course.id}>
               <CardHeader
                 title={course.title}
-                subtitle={`${course.provider} · ${Math.round(course.durationMinutes / 60)}h`}
+                subtitle={`${course.provider} · ${formatDuration(course.durationMinutes)}`}
                 action={
                   course.required ? <Badge tone="warning">Required</Badge> : <Badge>Elective</Badge>
                 }

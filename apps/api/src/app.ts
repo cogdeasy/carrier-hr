@@ -1,4 +1,5 @@
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
 import { authPlugin } from './auth/plugin.js';
@@ -31,6 +32,17 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     origin: corsOrigins(env),
     credentials: true,
   });
+
+  // Rate limiting protects against brute-force and abuse. Disabled under test
+  // to keep the suite deterministic; per-route stricter limits live on the
+  // auth endpoints (see auth.routes.ts).
+  if (env.NODE_ENV !== 'test') {
+    await app.register(rateLimit, {
+      global: true,
+      max: 300,
+      timeWindow: '1 minute',
+    });
+  }
 
   await app.register(authPlugin);
 

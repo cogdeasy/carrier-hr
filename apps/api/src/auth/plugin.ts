@@ -4,6 +4,7 @@ import fp from 'fastify-plugin';
 import { hasPermission, permissionsForRoles, type Permission } from '@carrier-hr/shared';
 import { getEnv } from '../env.js';
 import { Forbidden, Unauthorized } from '../lib/errors.js';
+import { rolesForEmployee } from '../services/roles.service.js';
 import type { AuthPrincipal, JwtPayload } from './types.js';
 
 declare module 'fastify' {
@@ -40,12 +41,15 @@ export const authPlugin = fp(async (app) => {
     } catch {
       throw Unauthorized('Invalid or expired session');
     }
+    // Re-read roles from the database so revoked/changed roles take effect
+    // immediately rather than persisting until the token expires.
+    const roles = await rolesForEmployee(app.db, payload.employeeId);
     req.principal = {
       userId: payload.sub,
       employeeId: payload.employeeId,
       email: payload.email,
-      roles: payload.roles,
-      permissions: permissionsForRoles(payload.roles),
+      roles,
+      permissions: permissionsForRoles(roles),
     };
   });
 
