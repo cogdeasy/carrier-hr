@@ -1,6 +1,12 @@
-import type { CreateEmployeeInput, Employee, Paginated } from '@collins-hr/shared';
+import type {
+  CreateEmployeeInput,
+  Employee,
+  EmployeeSortField,
+  Paginated,
+  SortDirection,
+} from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Users } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronsUpDown, Plus, Search, Users, X } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
@@ -18,18 +24,68 @@ import { ApiError, api } from '../../lib/api';
 import { titleCase } from '../../lib/format';
 
 const DEPARTMENTS = [
+  'Executive',
+  'Human Resources',
   'Engineering',
+  'Product',
   'Sales',
   'Marketing',
   'Finance',
-  'Human Resources',
   'Operations',
-  'Customer Success',
-  'Legal',
-  'IT',
   'Supply Chain',
-  'Research & Development',
-  'Executive',
+  'Information Technology',
+  'Customer Service',
+  'Legal',
+];
+
+const DIVISIONS = [
+  'Avionics',
+  'Mission Systems',
+  'Power & Controls',
+  'Interiors',
+  'Aerostructures',
+  'Connected Aviation Solutions',
+  'Corporate',
+];
+
+const LOCATIONS = [
+  'Charlotte, NC',
+  'Cedar Rapids, IA',
+  'Windsor Locks, CT',
+  'Rockford, IL',
+  'Richardson, TX',
+  'Phoenix, AZ',
+  'Reading, UK',
+  'Toulouse, FR',
+];
+
+const STATUSES = [
+  { value: 'active', label: 'Active' },
+  { value: 'on_leave', label: 'On leave' },
+  { value: 'pre_start', label: 'Pre-start' },
+  { value: 'terminated', label: 'Terminated' },
+];
+
+const EMPLOYMENT_TYPES = [
+  { value: 'full_time', label: 'Full time' },
+  { value: 'part_time', label: 'Part time' },
+  { value: 'contractor', label: 'Contractor' },
+  { value: 'intern', label: 'Intern' },
+];
+
+const PAGE_SIZE = 15;
+
+interface SortableColumn {
+  field: EmployeeSortField;
+  label: string;
+}
+
+const COLUMNS: SortableColumn[] = [
+  { field: 'name', label: 'Name' },
+  { field: 'jobTitle', label: 'Title' },
+  { field: 'department', label: 'Department' },
+  { field: 'location', label: 'Location' },
+  { field: 'status', label: 'Status' },
 ];
 
 export function DirectoryPage() {
@@ -37,21 +93,59 @@ export function DirectoryPage() {
   const { can } = useAuth();
   const [search, setSearch] = useState('');
   const [department, setDepartment] = useState('');
+  const [division, setDivision] = useState('');
+  const [location, setLocation] = useState('');
   const [status, setStatus] = useState('');
+  const [employmentType, setEmploymentType] = useState('');
+  const [sort, setSort] = useState<EmployeeSortField>('name');
+  const [sortDir, setSortDir] = useState<SortDirection>('asc');
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
 
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['employees', { search, department, status, page }],
+  const hasFilters = Boolean(
+    search || department || division || location || status || employmentType,
+  );
+
+  const { data, isLoading, isFetching, isError, refetch } = useQuery({
+    queryKey: [
+      'employees',
+      { search, department, division, location, status, employmentType, sort, sortDir, page },
+    ],
     queryFn: () =>
       api.get<Paginated<Employee>>('/employees', {
         search: search || undefined,
         department: department || undefined,
+        division: division || undefined,
+        location: location || undefined,
         status: status || undefined,
+        employmentType: employmentType || undefined,
+        sort,
+        sortDir,
         page,
-        pageSize: 15,
+        pageSize: PAGE_SIZE,
       }),
+    placeholderData: (prev) => prev,
   });
+
+  function toggleSort(field: EmployeeSortField) {
+    setPage(1);
+    if (sort === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSort(field);
+      setSortDir('asc');
+    }
+  }
+
+  function resetFilters() {
+    setSearch('');
+    setDepartment('');
+    setDivision('');
+    setLocation('');
+    setStatus('');
+    setEmploymentType('');
+    setPage(1);
+  }
 
   return (
     <div>
@@ -68,12 +162,13 @@ export function DirectoryPage() {
       />
 
       <Card className="mb-4 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
               className="pl-9"
               placeholder="Search by name, title, email…"
+              aria-label="Search employees"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -81,34 +176,59 @@ export function DirectoryPage() {
               }}
             />
           </div>
-          <Select
+          <FilterSelect
+            label="Department"
             value={department}
-            onChange={(e) => {
-              setDepartment(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">All departments</option>
-            {DEPARTMENTS.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </Select>
-          <Select
+            onChange={setDepartment}
+            onReset={() => setPage(1)}
+            options={DEPARTMENTS.map((d) => ({ value: d, label: d }))}
+            allLabel="All departments"
+          />
+          <FilterSelect
+            label="Division"
+            value={division}
+            onChange={setDivision}
+            onReset={() => setPage(1)}
+            options={DIVISIONS.map((d) => ({ value: d, label: d }))}
+            allLabel="All divisions"
+          />
+          <FilterSelect
+            label="Location"
+            value={location}
+            onChange={setLocation}
+            onReset={() => setPage(1)}
+            options={LOCATIONS.map((l) => ({ value: l, label: l }))}
+            allLabel="All locations"
+          />
+          <FilterSelect
+            label="Status"
             value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="on_leave">On leave</option>
-            <option value="terminated">Terminated</option>
-            <option value="pre_start">Pre-start</option>
-          </Select>
+            onChange={setStatus}
+            onReset={() => setPage(1)}
+            options={STATUSES}
+            allLabel="All statuses"
+          />
+          <FilterSelect
+            label="Employment type"
+            value={employmentType}
+            onChange={setEmploymentType}
+            onReset={() => setPage(1)}
+            options={EMPLOYMENT_TYPES}
+            allLabel="All types"
+          />
         </div>
+        {hasFilters ? (
+          <div className="mt-3 flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<X className="h-3.5 w-3.5" />}
+              onClick={resetFilters}
+            >
+              Clear filters
+            </Button>
+          </div>
+        ) : null}
       </Card>
 
       <Card>
@@ -116,20 +236,50 @@ export function DirectoryPage() {
           <div className="flex justify-center py-16">
             <Spinner className="h-8 w-8" />
           </div>
+        ) : isError ? (
+          <div className="p-6">
+            <EmptyState
+              icon={Users}
+              title="Couldn't load the directory"
+              description="Something went wrong fetching employees."
+              action={
+                <Button variant="outline" size="sm" onClick={() => void refetch()}>
+                  Try again
+                </Button>
+              }
+            />
+          </div>
         ) : !data || data.data.length === 0 ? (
           <div className="p-6">
-            <EmptyState icon={Users} title="No employees found" description="Try adjusting your filters." />
+            <EmptyState
+              icon={Users}
+              title="No employees found"
+              description={
+                hasFilters ? 'Try adjusting or clearing your filters.' : 'No employees yet.'
+              }
+              action={
+                hasFilters ? (
+                  <Button variant="outline" size="sm" onClick={resetFilters}>
+                    Clear filters
+                  </Button>
+                ) : undefined
+              }
+            />
           </div>
         ) : (
           <>
             <Table>
               <THead>
                 <TR>
-                  <TH>Name</TH>
-                  <TH>Title</TH>
-                  <TH>Department</TH>
-                  <TH>Location</TH>
-                  <TH>Status</TH>
+                  {COLUMNS.map((col) => (
+                    <SortHeader
+                      key={col.field}
+                      column={col}
+                      activeField={sort}
+                      direction={sortDir}
+                      onSort={toggleSort}
+                    />
+                  ))}
                 </TR>
               </THead>
               <TBody>
@@ -190,6 +340,76 @@ export function DirectoryPage() {
   );
 }
 
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  onReset,
+  options,
+  allLabel,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  onReset: () => void;
+  options: { value: string; label: string }[];
+  allLabel: string;
+}) {
+  return (
+    <Select
+      aria-label={label}
+      value={value}
+      onChange={(e) => {
+        onChange(e.target.value);
+        onReset();
+      }}
+    >
+      <option value="">{allLabel}</option>
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </Select>
+  );
+}
+
+function SortHeader({
+  column,
+  activeField,
+  direction,
+  onSort,
+}: {
+  column: SortableColumn;
+  activeField: EmployeeSortField;
+  direction: SortDirection;
+  onSort: (field: EmployeeSortField) => void;
+}) {
+  const active = activeField === column.field;
+  const nextDir = active && direction === 'asc' ? 'descending' : 'ascending';
+  return (
+    <TH>
+      <button
+        type="button"
+        onClick={() => onSort(column.field)}
+        aria-label={`Sort by ${column.label} ${nextDir}`}
+        className="inline-flex items-center gap-1 font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-700"
+      >
+        {column.label}
+        {active ? (
+          direction === 'asc' ? (
+            <ArrowUp className="h-3 w-3" />
+          ) : (
+            <ArrowDown className="h-3 w-3" />
+          )
+        ) : (
+          <ChevronsUpDown className="h-3 w-3 text-slate-300" />
+        )}
+      </button>
+    </TH>
+  );
+}
+
 function CreateEmployeeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const [form, setForm] = useState({
@@ -198,8 +418,8 @@ function CreateEmployeeModal({ open, onClose }: { open: boolean; onClose: () => 
     email: '',
     jobTitle: '',
     department: 'Engineering',
-    division: 'Collins Aerospace',
-    location: 'Palm Beach Gardens, FL',
+    division: 'Avionics',
+    location: 'Cedar Rapids, IA',
     employmentType: 'full_time',
     hireDate: new Date().toISOString().slice(0, 10),
   });
@@ -241,9 +461,7 @@ function CreateEmployeeModal({ open, onClose }: { open: boolean; onClose: () => 
         open={open}
         onClose={handleClose}
         title="Employee created"
-        footer={
-          <Button onClick={handleClose}>Done</Button>
-        }
+        footer={<Button onClick={handleClose}>Done</Button>}
       >
         <div className="space-y-3">
           <p className="text-sm text-slate-600">
@@ -283,39 +501,44 @@ function CreateEmployeeModal({ open, onClose }: { open: boolean; onClose: () => 
     >
       <form id="create-employee-form" onSubmit={onSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="First name">
+          <Field label="First name" htmlFor="create-first">
             <Input
+              id="create-first"
               required
               value={form.firstName}
               onChange={(e) => setForm({ ...form, firstName: e.target.value })}
             />
           </Field>
-          <Field label="Last name">
+          <Field label="Last name" htmlFor="create-last">
             <Input
+              id="create-last"
               required
               value={form.lastName}
               onChange={(e) => setForm({ ...form, lastName: e.target.value })}
             />
           </Field>
         </div>
-        <Field label="Work email">
+        <Field label="Work email" htmlFor="create-email">
           <Input
+            id="create-email"
             type="email"
             required
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
         </Field>
-        <Field label="Job title">
+        <Field label="Job title" htmlFor="create-title">
           <Input
+            id="create-title"
             required
             value={form.jobTitle}
             onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
           />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Department">
+          <Field label="Department" htmlFor="create-dept">
             <Select
+              id="create-dept"
               value={form.department}
               onChange={(e) => setForm({ ...form, department: e.target.value })}
             >
@@ -326,35 +549,57 @@ function CreateEmployeeModal({ open, onClose }: { open: boolean; onClose: () => 
               ))}
             </Select>
           </Field>
-          <Field label="Employment type">
+          <Field label="Division" htmlFor="create-division">
             <Select
-              value={form.employmentType}
-              onChange={(e) => setForm({ ...form, employmentType: e.target.value })}
+              id="create-division"
+              value={form.division}
+              onChange={(e) => setForm({ ...form, division: e.target.value })}
             >
-              <option value="full_time">Full time</option>
-              <option value="part_time">Part time</option>
-              <option value="contractor">Contractor</option>
-              <option value="intern">Intern</option>
+              {DIVISIONS.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
             </Select>
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Location">
-            <Input
-              required
+          <Field label="Location" htmlFor="create-location">
+            <Select
+              id="create-location"
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
-            />
+            >
+              {LOCATIONS.map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
+            </Select>
           </Field>
-          <Field label="Hire date">
-            <Input
-              type="date"
-              required
-              value={form.hireDate}
-              onChange={(e) => setForm({ ...form, hireDate: e.target.value })}
-            />
+          <Field label="Employment type" htmlFor="create-type">
+            <Select
+              id="create-type"
+              value={form.employmentType}
+              onChange={(e) => setForm({ ...form, employmentType: e.target.value })}
+            >
+              {EMPLOYMENT_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </Select>
           </Field>
         </div>
+        <Field label="Hire date" htmlFor="create-hire">
+          <Input
+            id="create-hire"
+            type="date"
+            required
+            value={form.hireDate}
+            onChange={(e) => setForm({ ...form, hireDate: e.target.value })}
+          />
+        </Field>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
       </form>
     </Modal>

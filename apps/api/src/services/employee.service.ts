@@ -1,15 +1,20 @@
 import { and, asc, count, desc, eq, or, sql, type SQL } from 'drizzle-orm';
-import type {
-  CreateEmployeeInput,
-  Employee,
-  OrgNode,
-  Paginated,
-  Role,
-  UpdateEmployeeInput,
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
+import {
+  hasPermission,
+  type CreateEmployeeInput,
+  type Employee,
+  type EmployeeSortField,
+  type OrgNode,
+  type Paginated,
+  type Role,
+  type SortDirection,
+  type TerminateEmployeeInput,
+  type UpdateEmployeeInput,
 } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { employees, userRoles, users } from '../db/schema.js';
-import { Conflict, NotFound } from '../lib/errors.js';
+import { BadRequest, Conflict, NotFound } from '../lib/errors.js';
 import { createId } from '../lib/ids.js';
 import { offset, paginate } from '../lib/pagination.js';
 import { nowIso } from '../lib/dates.js';
@@ -22,13 +27,29 @@ export interface ListEmployeesParams {
   pageSize: number;
   search?: string;
   department?: string;
+  division?: string;
+  location?: string;
   status?: string;
+  employmentType?: string;
   managerId?: string;
+  sort?: EmployeeSortField;
+  sortDir?: SortDirection;
 }
+
+/** Identity of the principal making a request, used for PII scoping. */
+export interface Viewer {
+  employeeId: string;
+  roles: Role[];
+}
+
+/** PII fields hidden from peers who are neither the subject, the subject's
+ * manager, nor an HR/admin role. */
+const PII_FIELDS = ['personalPhone', 'dateOfBirth', 'address', 'emergencyContact'] as const;
 
 export async function listEmployees(
   db: Database,
   params: ListEmployeesParams,
+  viewer?: Viewer,
 ): Promise<Paginated<Employee>> {
   const filters: SQL[] = [];
   if (params.search) {
@@ -45,7 +66,10 @@ export async function listEmployees(
     if (searchClause) filters.push(searchClause);
   }
   if (params.department) filters.push(eq(employees.department, params.department));
+  if (params.division) filters.push(eq(employees.division, params.division));
+  if (params.location) filters.push(eq(employees.location, params.location));
   if (params.status) filters.push(eq(employees.status, params.status));
+  if (params.employmentType) filters.push(eq(employees.employmentType, params.employmentType));
   if (params.managerId) filters.push(eq(employees.managerId, params.managerId));
 
   const where = filters.length ? and(...filters) : undefined;
@@ -57,7 +81,7 @@ export async function listEmployees(
     .select()
     .from(employees)
     .where(where)
-    .orderBy(asc(employees.lastName), asc(employees.firstName))
+    .orderBy(...orderByClause(params.sort ?? 'name', params.sortDir ?? 'asc'))
     .limit(params.pageSize)
     .offset(offset(params.page, params.pageSize));
 
@@ -65,8 +89,28 @@ export async function listEmployees(
     db,
     rows.map((r) => r.id),
   );
-  const data = rows.map((r) => toEmployee(r, roleMap.get(r.id) ?? []));
+  const data = rows.map((r) => {
+    const employee = toEmployee(r, roleMap.get(r.id) ?? []);
+    return viewer ? scopeEmployeePii(employee, viewer) : employee;
+  });
   return paginate(data, total, params.page, params.pageSize);
+}
+
+const SORT_COLUMNS: Record<EmployeeSortField, SQLiteColumn[]> = {
+  name: [employees.lastName, employees.firstName],
+  jobTitle: [employees.jobTitle],
+  department: [employees.department],
+  division: [employees.division],
+  location: [employees.location],
+  status: [employees.status],
+  hireDate: [employees.hireDate],
+};
+
+function orderByClause(sort: EmployeeSortField, dir: SortDirection): SQL[] {
+  const direction = dir === 'desc' ? desc : asc;
+  const primary = SORT_COLUMNS[sort].map((col) => direction(col));
+  // A stable, deterministic tiebreak keeps pagination consistent across pages.
+  return sort === 'name' ? primary : [...primary, asc(employees.lastName), asc(employees.firstName)];
 }
 
 export async function getEmployee(db: Database, id: string): Promise<Employee> {
@@ -74,6 +118,34 @@ export async function getEmployee(db: Database, id: string): Promise<Employee> {
   if (!row) throw NotFound('Employee not found');
   const roles = await rolesForEmployee(db, id);
   return toEmployee(row, roles);
+}
+
+/** Whether `viewer` may see the subject's full PII (personal phone, DOB,
+ * home address, emergency contact). True for the subject, the subject's
+ * direct manager, and any role with directory write access (HR/admin). */
+export function canViewPii(viewer: Viewer, subject: Pick<Employee, 'id' | 'managerId'>): boolean {
+  return (
+    viewer.employeeId === subject.id ||
+    subject.managerId === viewer.employeeId ||
+    hasPermission(viewer.roles, 'employee:write')
+  );
+}
+
+/** Strips sensitive fields from an employee a viewer is not entitled to see. */
+export function scopeEmployeePii(employee: Employee, viewer: Viewer): Employee {
+  if (canViewPii(viewer, employee)) return employee;
+  const redacted = { ...employee };
+  for (const field of PII_FIELDS) redacted[field] = null;
+  return redacted;
+}
+
+/** Fetches an employee with PII redacted according to the viewer's relationship. */
+export async function getEmployeeForViewer(
+  db: Database,
+  id: string,
+  viewer: Viewer,
+): Promise<Employee> {
+  return scopeEmployeePii(await getEmployee(db, id), viewer);
 }
 
 async function nextEmployeeNumber(db: Database): Promise<string> {
@@ -214,6 +286,44 @@ export async function updateEmployee(
   return getEmployee(db, id);
 }
 
+/** Terminates or places an employee on leave, recording the effective date.
+ * Re-terminating an already-terminated record is rejected; on-leave dates may
+ * still be updated or transitioned to terminated. */
+export async function terminateEmployee(
+  db: Database,
+  id: string,
+  input: TerminateEmployeeInput,
+): Promise<Employee> {
+  const [row] = await db.select().from(employees).where(eq(employees.id, id)).limit(1);
+  if (!row) throw NotFound('Employee not found');
+  if (row.status === 'terminated') throw Conflict('Employee is already terminated');
+
+  await db
+    .update(employees)
+    .set({
+      status: input.status,
+      terminationDate: input.terminationDate,
+      updatedAt: nowIso(),
+    })
+    .where(eq(employees.id, id));
+
+  return getEmployee(db, id);
+}
+
+/** Reactivates a terminated or on-leave employee, clearing the termination date. */
+export async function reactivateEmployee(db: Database, id: string): Promise<Employee> {
+  const [row] = await db.select().from(employees).where(eq(employees.id, id)).limit(1);
+  if (!row) throw NotFound('Employee not found');
+  if (row.status === 'active') throw BadRequest('Employee is already active');
+
+  await db
+    .update(employees)
+    .set({ status: 'active', terminationDate: null, updatedAt: nowIso() })
+    .where(eq(employees.id, id));
+
+  return getEmployee(db, id);
+}
+
 export async function setEmployeeRoles(
   db: Database,
   employeeId: string,
@@ -231,7 +341,11 @@ export async function setEmployeeRoles(
   }
 }
 
-export async function listDirectReports(db: Database, managerId: string): Promise<Employee[]> {
+export async function listDirectReports(
+  db: Database,
+  managerId: string,
+  viewer?: Viewer,
+): Promise<Employee[]> {
   const rows = await db
     .select()
     .from(employees)
@@ -241,34 +355,65 @@ export async function listDirectReports(db: Database, managerId: string): Promis
     db,
     rows.map((r) => r.id),
   );
-  return rows.map((r) => toEmployee(r, roleMap.get(r.id) ?? []));
+  return rows.map((r) => {
+    const employee = toEmployee(r, roleMap.get(r.id) ?? []);
+    return viewer ? scopeEmployeePii(employee, viewer) : employee;
+  });
 }
 
-/** Builds the org chart rooted at employees with no manager (or a given root). */
+/** Builds the org chart rooted at employees with no manager (or a given root).
+ *
+ * The tree is materialized with a depth-first walk guarded by a visited set so
+ * that managerId cycles (A→B→A) or self-references can never produce an
+ * infinite structure; any record not reachable from a genuine root — i.e. one
+ * trapped in a cycle — is surfaced as an additional root so no one disappears. */
 export async function getOrgChart(db: Database, rootId?: string): Promise<OrgNode[]> {
   const rows = await db
     .select()
     .from(employees)
     .where(eq(employees.status, 'active'))
-    .orderBy(asc(employees.lastName));
+    .orderBy(asc(employees.lastName), asc(employees.firstName));
 
-  const nodes = new Map<string, OrgNode>();
+  const childIds = new Map<string, string[]>();
+  const present = new Set(rows.map((r) => r.id));
+  const rowById = new Map(rows.map((r) => [r.id, r]));
+  const rootIds: string[] = [];
   for (const row of rows) {
-    nodes.set(row.id, { ...toEmployeeRef(row), managerId: row.managerId, reports: [] });
-  }
-
-  const roots: OrgNode[] = [];
-  for (const node of nodes.values()) {
-    if (node.managerId && nodes.has(node.managerId)) {
-      nodes.get(node.managerId)!.reports.push(node);
+    const managerPresent = row.managerId && row.managerId !== row.id && present.has(row.managerId);
+    if (managerPresent) {
+      const siblings = childIds.get(row.managerId!) ?? [];
+      siblings.push(row.id);
+      childIds.set(row.managerId!, siblings);
     } else {
-      roots.push(node);
+      rootIds.push(row.id);
     }
   }
 
+  const visited = new Set<string>();
+  const build = (id: string): OrgNode => {
+    visited.add(id);
+    const row = rowById.get(id)!;
+    const reports = (childIds.get(id) ?? [])
+      .filter((childId) => !visited.has(childId))
+      .map((childId) => build(childId));
+    return {
+      ...toEmployeeRef(row),
+      managerId: row.managerId,
+      status: row.status as OrgNode['status'],
+      location: row.location,
+      reports,
+    };
+  };
+
   if (rootId) {
-    const root = nodes.get(rootId);
-    return root ? [root] : [];
+    if (!present.has(rootId)) return [];
+    return [build(rootId)];
+  }
+
+  const roots = rootIds.map((id) => build(id));
+  // Defensively re-home anyone stranded inside a managerId cycle.
+  for (const row of rows) {
+    if (!visited.has(row.id)) roots.push(build(row.id));
   }
   return roots;
 }
