@@ -236,6 +236,72 @@ export const benefitPlans = sqliteTable('benefit_plans', {
   planYear: integer('plan_year').notNull(),
 });
 
+export const benefitPlanTiers = sqliteTable(
+  'benefit_plan_tiers',
+  {
+    id: text('id').primaryKey(),
+    planId: text('plan_id')
+      .notNull()
+      .references(() => benefitPlans.id, { onDelete: 'cascade' }),
+    tier: text('tier').notNull(),
+    monthlyPremiumCents: integer('monthly_premium_cents').notNull(),
+    employerContributionCents: integer('employer_contribution_cents').notNull(),
+  },
+  (t) => ({
+    uniq: uniqueIndex('benefit_plan_tiers_uniq').on(t.planId, t.tier),
+  }),
+);
+
+export const benefitDependents = sqliteTable(
+  'benefit_dependents',
+  {
+    id: text('id').primaryKey(),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    firstName: text('first_name').notNull(),
+    lastName: text('last_name').notNull(),
+    relationship: text('relationship').notNull(),
+    dateOfBirth: text('date_of_birth').notNull(),
+    ...timestamps,
+  },
+  (t) => ({
+    byEmployee: index('benefit_dependents_employee_idx').on(t.employeeId),
+  }),
+);
+
+export const qualifyingLifeEvents = sqliteTable(
+  'qualifying_life_events',
+  {
+    id: text('id').primaryKey(),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    eventDate: text('event_date').notNull(),
+    status: text('status').notNull().default('pending'),
+    windowEndsAt: text('window_ends_at').notNull(),
+    note: text('note'),
+    decidedById: text('decided_by_id').references(() => employees.id, {
+      onDelete: 'set null',
+    }),
+    decidedAt: text('decided_at'),
+    ...timestamps,
+  },
+  (t) => ({
+    byEmployee: index('qle_employee_idx').on(t.employeeId),
+  }),
+);
+
+export const enrollmentPeriods = sqliteTable('enrollment_periods', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  planYear: integer('plan_year').notNull(),
+  startsAt: text('starts_at').notNull(),
+  endsAt: text('ends_at').notNull(),
+  ...timestamps,
+});
+
 export const benefitEnrollments = sqliteTable(
   'benefit_enrollments',
   {
@@ -247,8 +313,15 @@ export const benefitEnrollments = sqliteTable(
       .notNull()
       .references(() => benefitPlans.id, { onDelete: 'cascade' }),
     status: text('status').notNull().default('pending'),
+    coverageTier: text('coverage_tier').notNull().default('employee_only'),
+    effectiveDate: text('effective_date'),
+    endDate: text('end_date'),
+    qleId: text('qle_id').references(() => qualifyingLifeEvents.id, {
+      onDelete: 'set null',
+    }),
     electedAt: text('elected_at'),
     dependents: integer('dependents').notNull().default(0),
+    dependentIds: text('dependent_ids').notNull().default('[]'),
     ...timestamps,
   },
   (t) => ({
