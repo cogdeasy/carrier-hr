@@ -174,6 +174,7 @@ export const timesheetEntries = sqliteTable('timesheet_entries', {
     .references(() => timesheets.id, { onDelete: 'cascade' }),
   date: text('date').notNull(),
   project: text('project').notNull(),
+  task: text('task'),
   hours: real('hours').notNull(),
   notes: text('notes'),
 });
