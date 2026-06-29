@@ -279,11 +279,13 @@ export async function getHrDashboard(
   const [pendingTimeOffRow] = await db
     .select({ count: countExpr })
     .from(timeOffRequests)
-    .where(eq(timeOffRequests.status, 'pending'));
+    .innerJoin(employees, eq(timeOffRequests.employeeId, employees.id))
+    .where(and(eq(timeOffRequests.status, 'pending'), ...cat));
   const [pendingTimesheetsRow] = await db
     .select({ count: countExpr })
     .from(timesheets)
-    .where(eq(timesheets.status, 'submitted'));
+    .innerJoin(employees, eq(timesheets.employeeId, employees.id))
+    .where(and(eq(timesheets.status, 'submitted'), ...cat));
   const openRequisitionsByDepartment = toCategoryCounts(openReqRows);
   const openRequisitions = openRequisitionsByDepartment.reduce((a, b) => a + b.count, 0);
 
