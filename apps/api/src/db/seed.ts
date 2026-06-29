@@ -14,7 +14,9 @@ import {
   HOLIDAYS_2026,
   LAST_NAMES,
   LOCATIONS,
-  ONBOARDING_TEMPLATE,
+  OFFBOARDING_TEMPLATE_ITEMS,
+  ONBOARDING_TEMPLATE_ITEMS,
+  type TemplateItemSeed,
   TITLES_BY_DEPARTMENT,
 } from './seed-data.js';
 import * as t from './schema.js';
@@ -502,25 +504,93 @@ async function seedSupporting(db: Database): Promise<void> {
     }
   }
 
-  // Onboarding tasks for recent hires
-  const recentHires = active
-    .filter((e) => e.hireDate >= daysAgo(120))
-    .slice(0, 12);
-  for (const e of recentHires) {
-    for (let idx = 0; idx < ONBOARDING_TEMPLATE.length; idx += 1) {
-      const task = ONBOARDING_TEMPLATE[idx]!;
-      const done = rand() < 0.5;
-      await db.insert(t.onboardingTasks).values({
-        id: createId('onb'),
-        employeeId: e.id,
-        title: task.title,
-        category: task.category,
-        assigneeRole: task.assigneeRole,
-        status: done ? 'completed' : 'pending',
-        completedAt: done ? daysAgo(randInt(1, 30)) : null,
+  // Onboarding & offboarding templates, then instantiated checklists.
+  function addDays(iso: string, days: number): string {
+    const d = new Date(`${iso}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + days);
+    return isoDate(d);
+  }
+
+  async function seedTemplate(
+    name: string,
+    type: 'onboarding' | 'offboarding',
+    description: string,
+    items: TemplateItemSeed[],
+  ): Promise<string> {
+    const templateId = createId('obt');
+    await db.insert(t.onboardingTemplates).values({
+      id: templateId,
+      name,
+      type,
+      description,
+      isDefault: true,
+    });
+    for (let idx = 0; idx < items.length; idx += 1) {
+      const item = items[idx]!;
+      await db.insert(t.onboardingTemplateItems).values({
+        id: createId('obi'),
+        templateId,
+        title: item.title,
+        description: item.description ?? null,
+        category: item.category,
+        assigneeRole: item.assigneeRole,
+        dueOffsetDays: item.dueOffsetDays,
         orderIndex: idx,
       });
     }
+    return templateId;
+  }
+
+  const onboardingTemplateId = await seedTemplate(
+    'Standard New Hire Onboarding',
+    'onboarding',
+    'Default onboarding checklist for all new Collins Aerospace employees.',
+    ONBOARDING_TEMPLATE_ITEMS,
+  );
+  await seedTemplate(
+    'Standard Offboarding',
+    'offboarding',
+    'Asset return and access revocation checklist for departing employees.',
+    OFFBOARDING_TEMPLATE_ITEMS,
+  );
+
+  async function instantiateOnboarding(employeeId: string, anchorDate: string): Promise<void> {
+    const checklistId = createId('obc');
+    await db.insert(t.onboardingChecklists).values({
+      id: checklistId,
+      employeeId,
+      templateId: onboardingTemplateId,
+      type: 'onboarding',
+      title: 'Standard New Hire Onboarding',
+      status: 'active',
+      anchorDate,
+    });
+    for (let idx = 0; idx < ONBOARDING_TEMPLATE_ITEMS.length; idx += 1) {
+      const item = ONBOARDING_TEMPLATE_ITEMS[idx]!;
+      const done = rand() < 0.45;
+      await db.insert(t.onboardingTasks).values({
+        id: createId('onb'),
+        employeeId,
+        checklistId,
+        title: item.title,
+        description: item.description ?? null,
+        category: item.category,
+        assigneeRole: item.assigneeRole,
+        status: done ? 'completed' : 'pending',
+        dueDate: addDays(anchorDate, item.dueOffsetDays),
+        completedAt: done ? daysAgo(randInt(1, 20)) : null,
+        orderIndex: idx,
+      });
+    }
+  }
+
+  const recentHires = active.filter((e) => e.hireDate >= daysAgo(120)).slice(0, 12);
+  for (const e of recentHires) await instantiateOnboarding(e.id, e.hireDate);
+
+  // Ensure the demo employee always has an in-progress onboarding checklist.
+  const demoEmployee = employees.find((e) => e.email === 'employee@collins.com');
+  if (demoEmployee && !recentHires.some((e) => e.id === demoEmployee.id)) {
+    await instantiateOnboarding(demoEmployee.id, daysAgo(10));
   }
 
   // Documents (company-wide + personal)
