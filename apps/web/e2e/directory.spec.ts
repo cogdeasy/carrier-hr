@@ -38,7 +38,8 @@ test.describe('Employee directory', () => {
     await expect(page.locator('tbody tr').first()).toBeVisible();
     await page.locator('tbody tr').first().click();
     await expect(page).toHaveURL(/\/directory\/.+/);
-    await expect(page.getByText('Contact & details')).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Personal', exact: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Employment', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Direct reports' })).toBeVisible();
   });
 });

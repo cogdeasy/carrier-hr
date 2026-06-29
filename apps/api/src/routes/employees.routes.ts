@@ -2,33 +2,35 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import {
   createEmployeeSchema,
-  paginationQuerySchema,
+  listEmployeesQuerySchema,
   ROLES,
+  terminateEmployeeSchema,
   updateEmployeeSchema,
 } from '@collins-hr/shared';
 import { parse } from '../lib/validate.js';
 import {
   createEmployee,
-  getEmployee,
+  getEmployeeForViewer,
   getOrgChart,
   listDirectReports,
   listEmployees,
+  reactivateEmployee,
   setEmployeeRoles,
+  terminateEmployee,
   updateEmployee,
+  type Viewer,
 } from '../services/employee.service.js';
 
-const listQuerySchema = paginationQuerySchema.extend({
-  department: z.string().optional(),
-  status: z.string().optional(),
-  managerId: z.string().optional(),
-});
+function viewerOf(req: { principal: { employeeId: string; roles: Viewer['roles'] } }): Viewer {
+  return { employeeId: req.principal.employeeId, roles: req.principal.roles };
+}
 
 export async function employeeRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('onRequest', app.authenticate);
 
   app.get('/', { onRequest: [app.requirePermission('employee:read')] }, async (req) => {
-    const q = parse(listQuerySchema, req.query);
-    return listEmployees(app.db, q);
+    const q = parse(listEmployeesQuerySchema, req.query);
+    return listEmployees(app.db, q, viewerOf(req));
   });
 
   app.get('/org-chart', { onRequest: [app.requirePermission('org:read')] }, async (req) => {
@@ -38,12 +40,12 @@ export async function employeeRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/:id', { onRequest: [app.requirePermission('employee:read')] }, async (req) => {
     const { id } = parse(z.object({ id: z.string() }), req.params);
-    return getEmployee(app.db, id);
+    return getEmployeeForViewer(app.db, id, viewerOf(req));
   });
 
   app.get('/:id/reports', { onRequest: [app.requirePermission('employee:read')] }, async (req) => {
     const { id } = parse(z.object({ id: z.string() }), req.params);
-    return listDirectReports(app.db, id);
+    return listDirectReports(app.db, id, viewerOf(req));
   });
 
   app.post('/', { onRequest: [app.requirePermission('employee:write')] }, async (req, reply) => {
@@ -60,10 +62,21 @@ export async function employeeRoutes(app: FastifyInstance): Promise<void> {
     return updateEmployee(app.db, id, input);
   });
 
+  app.post('/:id/terminate', { onRequest: [app.requirePermission('employee:write')] }, async (req) => {
+    const { id } = parse(z.object({ id: z.string() }), req.params);
+    const input = parse(terminateEmployeeSchema, req.body);
+    return terminateEmployee(app.db, id, input);
+  });
+
+  app.post('/:id/reactivate', { onRequest: [app.requirePermission('employee:write')] }, async (req) => {
+    const { id } = parse(z.object({ id: z.string() }), req.params);
+    return reactivateEmployee(app.db, id);
+  });
+
   app.put('/:id/roles', { onRequest: [app.requirePermission('settings:admin')] }, async (req) => {
     const { id } = parse(z.object({ id: z.string() }), req.params);
     const { roles } = parse(z.object({ roles: z.array(z.enum(ROLES)).min(1) }), req.body);
     await setEmployeeRoles(app.db, id, roles);
-    return getEmployee(app.db, id);
+    return getEmployeeForViewer(app.db, id, viewerOf(req));
   });
 }
