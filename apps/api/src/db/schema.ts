@@ -428,6 +428,23 @@ export const courses = sqliteTable('courses', {
     .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
 });
 
+export const coursePrerequisites = sqliteTable(
+  'course_prerequisites',
+  {
+    id: text('id').primaryKey(),
+    courseId: text('course_id')
+      .notNull()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+    prerequisiteId: text('prerequisite_id')
+      .notNull()
+      .references(() => courses.id, { onDelete: 'cascade' }),
+  },
+  (t) => ({
+    uniq: uniqueIndex('course_prerequisites_uniq').on(t.courseId, t.prerequisiteId),
+    courseIdx: index('course_prerequisites_course_idx').on(t.courseId),
+  }),
+);
+
 export const courseEnrollments = sqliteTable(
   'course_enrollments',
   {
@@ -440,6 +457,12 @@ export const courseEnrollments = sqliteTable(
       .references(() => courses.id, { onDelete: 'cascade' }),
     status: text('status').notNull().default('not_started'),
     progress: integer('progress').notNull().default(0),
+    required: integer('required', { mode: 'boolean' }).notNull().default(false),
+    dueDate: text('due_date'),
+    assignedById: text('assigned_by_id').references(() => employees.id, {
+      onDelete: 'set null',
+    }),
+    certificateSerial: text('certificate_serial'),
     enrolledAt: text('enrolled_at')
       .notNull()
       .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
@@ -447,6 +470,8 @@ export const courseEnrollments = sqliteTable(
   },
   (t) => ({
     uniq: uniqueIndex('course_enrollments_uniq').on(t.employeeId, t.courseId),
+    employeeIdx: index('course_enrollments_employee_idx').on(t.employeeId),
+    courseIdx: index('course_enrollments_course_idx').on(t.courseId),
   }),
 );
 
