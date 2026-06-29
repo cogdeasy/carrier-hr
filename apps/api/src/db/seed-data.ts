@@ -152,13 +152,90 @@ export const HOLIDAYS_2026 = [
   { name: 'Christmas Day', date: '2026-12-25' },
 ];
 
-export const ONBOARDING_TEMPLATE = [
-  { title: 'Sign employment agreement', category: 'Paperwork', assigneeRole: 'employee' },
-  { title: 'Complete I-9 verification', category: 'Paperwork', assigneeRole: 'hr_admin' },
-  { title: 'Set up direct deposit', category: 'Payroll', assigneeRole: 'employee' },
-  { title: 'Enroll in benefits', category: 'Benefits', assigneeRole: 'employee' },
-  { title: 'Provision laptop and accounts', category: 'IT', assigneeRole: 'super_admin' },
-  { title: 'Complete required compliance training', category: 'Training', assigneeRole: 'employee' },
-  { title: 'Meet your team', category: 'Culture', assigneeRole: 'manager' },
-  { title: '30-day check-in', category: 'Culture', assigneeRole: 'manager' },
+export interface TemplateItemSeed {
+  title: string;
+  description?: string;
+  category: string;
+  assigneeRole: 'employee' | 'manager' | 'super_admin' | 'hr_admin';
+  dueOffsetDays: number;
+}
+
+export const ONBOARDING_TEMPLATE_ITEMS: TemplateItemSeed[] = [
+  {
+    title: 'Sign employment agreement',
+    description: 'Review and e-sign your offer and employment agreement.',
+    category: 'Paperwork',
+    assigneeRole: 'employee',
+    dueOffsetDays: 0,
+  },
+  {
+    title: 'Complete I-9 verification',
+    category: 'Paperwork',
+    assigneeRole: 'hr_admin',
+    dueOffsetDays: 3,
+  },
+  { title: 'Set up direct deposit', category: 'Payroll', assigneeRole: 'employee', dueOffsetDays: 5 },
+  { title: 'Enroll in benefits', category: 'Benefits', assigneeRole: 'employee', dueOffsetDays: 14 },
+  {
+    title: 'Provision laptop and accounts',
+    description: 'Issue hardware and create email, SSO and VPN accounts.',
+    category: 'IT',
+    assigneeRole: 'super_admin',
+    dueOffsetDays: 0,
+  },
+  {
+    title: 'Complete required compliance training',
+    category: 'Training',
+    assigneeRole: 'employee',
+    dueOffsetDays: 14,
+  },
+  { title: 'Meet your team', category: 'Culture', assigneeRole: 'manager', dueOffsetDays: 2 },
+  { title: '30-day check-in', category: 'Culture', assigneeRole: 'manager', dueOffsetDays: 30 },
+];
+
+export const OFFBOARDING_TEMPLATE_ITEMS: TemplateItemSeed[] = [
+  {
+    title: 'Return laptop and badge',
+    description: 'Collect all company hardware and access badges.',
+    category: 'Asset Return',
+    assigneeRole: 'employee',
+    dueOffsetDays: 0,
+  },
+  {
+    title: 'Return mobile device and peripherals',
+    category: 'Asset Return',
+    assigneeRole: 'employee',
+    dueOffsetDays: 0,
+  },
+  {
+    title: 'Revoke SSO and email access',
+    description: 'Disable accounts at end of last working day.',
+    category: 'Access Revocation',
+    assigneeRole: 'super_admin',
+    dueOffsetDays: 0,
+  },
+  {
+    title: 'Revoke building and VPN access',
+    category: 'Access Revocation',
+    assigneeRole: 'super_admin',
+    dueOffsetDays: 0,
+  },
+  {
+    title: 'Conduct exit interview',
+    category: 'HR',
+    assigneeRole: 'hr_admin',
+    dueOffsetDays: -2,
+  },
+  {
+    title: 'Process final pay and PTO payout',
+    category: 'Payroll',
+    assigneeRole: 'hr_admin',
+    dueOffsetDays: 3,
+  },
+  {
+    title: 'Knowledge transfer and handover',
+    category: 'Transition',
+    assigneeRole: 'manager',
+    dueOffsetDays: -5,
+  },
 ];
