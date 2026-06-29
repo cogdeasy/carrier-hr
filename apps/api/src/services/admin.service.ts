@@ -248,10 +248,6 @@ export async function listAdminUsers(
 }
 
 async function getAdminUserByEmployee(db: Database, employeeId: string): Promise<AdminUser> {
-  const page = await listAdminUsers(db, { page: 1, pageSize: 1, search: undefined });
-  const found = page.data.find((u) => u.employeeId === employeeId);
-  if (found) return found;
-  // Fall back to a direct lookup (the paginated search above only scans page 1).
   const [row] = await db
     .select({
       userId: users.id,
@@ -328,11 +324,16 @@ export async function assignRoles(
     throw Conflict('Cannot remove the last super admin');
   }
 
-  await db.delete(userRoles).where(eq(userRoles.userId, user.id));
   const unique = Array.from(new Set(roles));
-  for (const role of unique) {
-    await db.insert(userRoles).values({ id: createId('rol'), userId: user.id, role });
-  }
+  // Rewrite the role set atomically so a failure can never strand the user
+  // with no roles (schema guarantees at least one role, so the batch is never
+  // empty).
+  await db.batch([
+    db.delete(userRoles).where(eq(userRoles.userId, user.id)),
+    ...unique.map((role) =>
+      db.insert(userRoles).values({ id: createId('rol'), userId: user.id, role }),
+    ),
+  ] as Parameters<typeof db.batch>[0]);
 
   await recordAudit(db, {
     actorId,
