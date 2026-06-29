@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
-import { employees, timeOffBalances } from '../db/schema.js';
+import { employees, timeOffBalances, timeOffRequests } from '../db/schema.js';
 import { createId } from '../lib/ids.js';
 import {
   authHeader,
@@ -410,6 +410,75 @@ describe('time-off approval authorization', () => {
       .from(timeOffBalances)
       .where(eq(timeOffBalances.employeeId, emp.employeeId));
     expect(balance!.usedDays).toBe(daysA + daysB);
+  });
+
+  it('prevents concurrent approvals of different requests from overdrawing the balance', async () => {
+    const mgr = await seedUser(ctx.db, { email: 'over.mgr@collins.com', roles: ['manager'] });
+    const emp = await seedUser(ctx.db, {
+      email: 'over.emp@collins.com',
+      roles: ['employee'],
+      managerId: mgr.employeeId,
+    });
+    await ctx.db.insert(timeOffBalances).values({
+      id: createId('tob'),
+      employeeId: emp.employeeId,
+      type: 'vacation',
+      accruedDays: 8,
+      usedDays: 0,
+      year,
+    });
+    // Seed two pending requests that together exceed the accrual. The
+    // submission-time guard normally prevents this, so insert directly to
+    // exercise the approval-time atomic reservation in isolation.
+    const reqA = createId('tor');
+    const reqB = createId('tor');
+    await ctx.db.insert(timeOffRequests).values([
+      {
+        id: reqA,
+        employeeId: emp.employeeId,
+        type: 'vacation',
+        startDate: `${year}-10-05`,
+        endDate: `${year}-10-09`,
+        totalDays: 5,
+        status: 'pending',
+        approverId: mgr.employeeId,
+      },
+      {
+        id: reqB,
+        employeeId: emp.employeeId,
+        type: 'vacation',
+        startDate: `${year}-10-12`,
+        endDate: `${year}-10-16`,
+        totalDays: 5,
+        status: 'pending',
+        approverId: mgr.employeeId,
+      },
+    ]);
+
+    const mgrToken = await login(ctx.app, 'over.mgr@collins.com');
+    const [resA, resB] = await Promise.all([
+      ctx.app.inject({
+        method: 'POST',
+        url: `/api/time-off/requests/${reqA}/decision`,
+        headers: authHeader(mgrToken),
+        payload: { decision: 'approved' },
+      }),
+      ctx.app.inject({
+        method: 'POST',
+        url: `/api/time-off/requests/${reqB}/decision`,
+        headers: authHeader(mgrToken),
+        payload: { decision: 'approved' },
+      }),
+    ]);
+    const codes = [resA.statusCode, resB.statusCode].sort();
+    expect(codes).toEqual([200, 400]);
+
+    const [balance] = await ctx.db
+      .select()
+      .from(timeOffBalances)
+      .where(eq(timeOffBalances.employeeId, emp.employeeId));
+    expect(balance!.usedDays).toBeLessThanOrEqual(8);
+    expect(balance!.usedDays).toBe(5);
   });
 
   it('does not double-decrement when the same request is approved twice', async () => {

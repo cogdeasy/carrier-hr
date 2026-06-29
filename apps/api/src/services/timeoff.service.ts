@@ -331,9 +331,6 @@ export async function decideRequest(
   }
 
   const status = input.decision;
-  if (status === 'approved' && isAccrualTimeOffType(row.type)) {
-    await assertWithinBalance(db, row.employeeId, row.type as TimeOffType, yearOf(row.startDate), row.totalDays);
-  }
 
   // Guard the transition on the still-pending status so a duplicate/concurrent
   // decision can't double-apply the balance change. If no row matched, another
@@ -351,7 +348,25 @@ export async function decideRequest(
   if (decided.rowsAffected === 0) throw BadRequest('Request has already been decided');
 
   if (status === 'approved' && isAccrualTimeOffType(row.type)) {
-    await adjustUsedDays(db, row.employeeId, row.type as TimeOffType, yearOf(row.startDate), row.totalDays);
+    // Reserve the days with a single conditional UPDATE that only succeeds while
+    // the balance stays within the accrual. Folding the check into the atomic
+    // write closes the TOCTOU window where two approvals for the same employee
+    // could each pass a separate read-time check and overdraw the balance. If it
+    // can't be satisfied, revert the decision so the request stays pending.
+    const reserved = await reserveAccrual(
+      db,
+      row.employeeId,
+      row.type as TimeOffType,
+      yearOf(row.startDate),
+      row.totalDays,
+    );
+    if (!reserved) {
+      await db
+        .update(timeOffRequests)
+        .set({ status: 'pending', decisionNote: null, decidedAt: null, updatedAt: nowIso() })
+        .where(eq(timeOffRequests.id, requestId));
+      throw await overdraftError(db, row.employeeId, row.type as TimeOffType, yearOf(row.startDate), row.totalDays);
+    }
   }
 
   await createNotification(db, {
@@ -419,13 +434,40 @@ export async function cancelRequest(
   return toTimeOffRequest(updated!);
 }
 
-async function assertWithinBalance(
+/**
+ * Atomically reserve `days` against an accrual balance: the conditional UPDATE
+ * only matches while the post-increment total stays within the accrual, so
+ * concurrent reservations can't overdraw. Returns whether the reservation was
+ * applied (false when no balance row exists or it would exceed the accrual).
+ */
+async function reserveAccrual(
   db: Database,
   employeeId: string,
   type: TimeOffType,
   year: number,
   days: number,
-): Promise<void> {
+): Promise<boolean> {
+  const result = await db
+    .update(timeOffBalances)
+    .set({ usedDays: sql`${timeOffBalances.usedDays} + ${days}` })
+    .where(
+      and(
+        eq(timeOffBalances.employeeId, employeeId),
+        eq(timeOffBalances.type, type),
+        eq(timeOffBalances.year, year),
+        lte(sql`${timeOffBalances.usedDays} + ${days}`, timeOffBalances.accruedDays),
+      ),
+    );
+  return result.rowsAffected > 0;
+}
+
+async function overdraftError(
+  db: Database,
+  employeeId: string,
+  type: TimeOffType,
+  year: number,
+  days: number,
+): Promise<ReturnType<typeof BadRequest>> {
   const [existing] = await db
     .select()
     .from(timeOffBalances)
@@ -439,11 +481,9 @@ async function assertWithinBalance(
     .limit(1);
   const accrued = existing?.accruedDays ?? 0;
   const used = existing?.usedDays ?? 0;
-  if (used + days > accrued) {
-    throw BadRequest(
-      `Approving would overdraw ${type} balance: ${used + days} of ${accrued} accrued day(s)`,
-    );
-  }
+  return BadRequest(
+    `Approving would overdraw ${type} balance: ${used + days} of ${accrued} accrued day(s)`,
+  );
 }
 
 async function adjustUsedDays(

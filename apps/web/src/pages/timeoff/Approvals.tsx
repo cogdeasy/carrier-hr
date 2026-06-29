@@ -1,7 +1,7 @@
 import type { TimeOffRequest } from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, X } from 'lucide-react';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
@@ -139,6 +139,13 @@ function DecisionModal({
   const qc = useQueryClient();
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Clear leftover note/error when the modal opens for a different request.
+  const activeId = active?.request.id;
+  useEffect(() => {
+    setNote('');
+    setError(null);
+  }, [activeId]);
 
   const mutation = useMutation({
     mutationFn: ({ id, decision }: { id: string; decision: Decision }) =>
