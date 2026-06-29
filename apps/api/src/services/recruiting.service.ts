@@ -308,6 +308,14 @@ export async function updateJob(
   if (input.openings !== undefined && input.openings < row.filledCount) {
     throw BadRequest(`Openings cannot be fewer than the ${row.filledCount} already filled`);
   }
+  if (input.hiringManagerId) {
+    const [mgr] = await db
+      .select({ id: employees.id })
+      .from(employees)
+      .where(eq(employees.id, input.hiringManagerId))
+      .limit(1);
+    if (!mgr) throw BadRequest('Hiring manager not found');
+  }
   const salaryMinCents =
     input.salaryMinCents === undefined ? row.salaryMinCents : input.salaryMinCents;
   const salaryMaxCents =
