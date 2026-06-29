@@ -599,6 +599,7 @@ export async function updateChecklistStatus(
 export async function deleteChecklist(db: Database, requester: Requester, id: string): Promise<void> {
   const checklist = await loadChecklist(db, id);
   await assertCanManageEmployee(db, requester, checklist.employeeId);
+  await db.delete(onboardingTasks).where(eq(onboardingTasks.checklistId, id));
   await db.delete(onboardingChecklists).where(eq(onboardingChecklists.id, id));
 }
 

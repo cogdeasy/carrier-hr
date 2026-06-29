@@ -599,7 +599,7 @@ function InstantiateModal({
 
   const { data: employees } = useQuery({
     queryKey: ['employees', 'picker'],
-    queryFn: () => api.get<Paginated<Employee>>('/employees', { pageSize: 200 }),
+    queryFn: () => api.get<Paginated<Employee>>('/employees', { pageSize: 100 }),
   });
   const { data: templates } = useQuery({
     queryKey: ['onboarding', 'templates', mode],

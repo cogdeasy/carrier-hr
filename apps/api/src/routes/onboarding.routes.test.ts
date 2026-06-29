@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { onboardingTemplateItems, onboardingTemplates } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
+import { onboardingTasks, onboardingTemplateItems, onboardingTemplates } from '../db/schema.js';
 import { createId } from '../lib/ids.js';
 import {
   authHeader,
@@ -256,6 +257,21 @@ describe('onboarding & offboarding', () => {
     });
     expect(created.statusCode).toBe(201);
     expect(created.json().itemCount).toBe(1);
+  });
+
+  it('removes a checklist and its tasks together', async () => {
+    const created = (await instantiate(employee.employeeId, isoIn(0))).json();
+    const del = await ctx.app.inject({
+      method: 'DELETE',
+      url: `/api/onboarding/checklists/${created.id}`,
+      headers: authHeader(hrToken),
+    });
+    expect(del.statusCode).toBe(204);
+    const orphans = await ctx.db
+      .select()
+      .from(onboardingTasks)
+      .where(eq(onboardingTasks.checklistId, created.id));
+    expect(orphans).toHaveLength(0);
   });
 
   it('validates instantiation input', async () => {
