@@ -525,6 +525,27 @@ export const notifications = sqliteTable(
   }),
 );
 
+export const notificationPreferences = sqliteTable(
+  'notification_preferences',
+  {
+    id: text('id').primaryKey(),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    muted: integer('muted', { mode: 'boolean' }).notNull().default(false),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  (t) => ({
+    employeeTypeIdx: uniqueIndex('notification_preferences_employee_type_idx').on(
+      t.employeeId,
+      t.type,
+    ),
+  }),
+);
+
 export const auditLogs = sqliteTable('audit_logs', {
   id: text('id').primaryKey(),
   actorId: text('actor_id'),
