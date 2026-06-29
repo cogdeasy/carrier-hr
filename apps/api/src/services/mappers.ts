@@ -369,10 +369,12 @@ export function toCandidate(row: InferSelectModel<typeof schema.candidates>): Ca
 
 export function toOnboardingTask(
   row: InferSelectModel<typeof schema.onboardingTasks>,
+  options: { overdue?: boolean } = {},
 ): OnboardingTask {
   return {
     id: row.id,
     employeeId: row.employeeId,
+    checklistId: row.checklistId,
     title: row.title,
     description: row.description,
     category: row.category,
@@ -381,6 +383,7 @@ export function toOnboardingTask(
     dueDate: row.dueDate,
     completedAt: row.completedAt,
     orderIndex: row.orderIndex,
+    overdue: options.overdue ?? false,
   };
 }
 

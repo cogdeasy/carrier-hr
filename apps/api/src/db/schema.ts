@@ -508,6 +508,67 @@ export const candidates = sqliteTable(
 // Onboarding
 // ---------------------------------------------------------------------------
 
+export const onboardingTemplates = sqliteTable(
+  'onboarding_templates',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    type: text('type').notNull().default('onboarding'),
+    description: text('description'),
+    isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
+    ...timestamps,
+  },
+  (t) => ({
+    typeIdx: index('onboarding_templates_type_idx').on(t.type),
+  }),
+);
+
+export const onboardingTemplateItems = sqliteTable(
+  'onboarding_template_items',
+  {
+    id: text('id').primaryKey(),
+    templateId: text('template_id')
+      .notNull()
+      .references(() => onboardingTemplates.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    category: text('category').notNull().default('general'),
+    assigneeRole: text('assignee_role').notNull().default('employee'),
+    dueOffsetDays: integer('due_offset_days').notNull().default(0),
+    orderIndex: integer('order_index').notNull().default(0),
+  },
+  (t) => ({
+    templateIdx: index('onboarding_template_items_template_idx').on(t.templateId),
+  }),
+);
+
+export const onboardingChecklists = sqliteTable(
+  'onboarding_checklists',
+  {
+    id: text('id').primaryKey(),
+    employeeId: text('employee_id')
+      .notNull()
+      .references(() => employees.id, { onDelete: 'cascade' }),
+    templateId: text('template_id').references(() => onboardingTemplates.id, {
+      onDelete: 'set null',
+    }),
+    type: text('type').notNull().default('onboarding'),
+    title: text('title').notNull(),
+    status: text('status').notNull().default('active'),
+    anchorDate: text('anchor_date').notNull(),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  (t) => ({
+    employeeIdx: index('onboarding_checklists_employee_idx').on(t.employeeId),
+    typeIdx: index('onboarding_checklists_type_idx').on(t.type),
+  }),
+);
+
 export const onboardingTasks = sqliteTable(
   'onboarding_tasks',
   {
@@ -515,6 +576,9 @@ export const onboardingTasks = sqliteTable(
     employeeId: text('employee_id')
       .notNull()
       .references(() => employees.id, { onDelete: 'cascade' }),
+    checklistId: text('checklist_id').references(() => onboardingChecklists.id, {
+      onDelete: 'cascade',
+    }),
     title: text('title').notNull(),
     description: text('description'),
     category: text('category').notNull().default('general'),
@@ -526,6 +590,7 @@ export const onboardingTasks = sqliteTable(
   },
   (t) => ({
     employeeIdx: index('onboarding_tasks_employee_idx').on(t.employeeId),
+    checklistIdx: index('onboarding_tasks_checklist_idx').on(t.checklistId),
   }),
 );
 
