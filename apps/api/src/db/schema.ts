@@ -205,11 +205,14 @@ export const payslips = sqliteTable(
     periodEnd: text('period_end').notNull(),
     payDate: text('pay_date').notNull(),
     status: text('status').notNull().default('issued'),
+    frequency: text('frequency').notNull().default('biweekly'),
     currency: text('currency').notNull().default('USD'),
     grossCents: integer('gross_cents').notNull(),
     netCents: integer('net_cents').notNull(),
     totalDeductionsCents: integer('total_deductions_cents').notNull(),
     totalTaxCents: integer('total_tax_cents').notNull(),
+    totalContributionsCents: integer('total_contributions_cents').notNull().default(0),
+    payRunId: text('pay_run_id').references(() => payRuns.id, { onDelete: 'set null' }),
     lines: text('lines').notNull(),
     createdAt: text('created_at')
       .notNull()
@@ -217,8 +220,28 @@ export const payslips = sqliteTable(
   },
   (t) => ({
     employeeIdx: index('payslips_employee_idx').on(t.employeeId),
+    payRunIdx: index('payslips_pay_run_idx').on(t.payRunId),
+    employeePeriodIdx: uniqueIndex('payslips_employee_period_idx').on(
+      t.employeeId,
+      t.periodStart,
+      t.periodEnd,
+    ),
   }),
 );
+
+export const payRuns = sqliteTable('pay_runs', {
+  id: text('id').primaryKey(),
+  periodStart: text('period_start').notNull(),
+  periodEnd: text('period_end').notNull(),
+  payDate: text('pay_date').notNull(),
+  frequency: text('frequency').notNull().default('biweekly'),
+  status: text('status').notNull().default('issued'),
+  currency: text('currency').notNull().default('USD'),
+  createdById: text('created_by_id').references(() => employees.id, { onDelete: 'set null' }),
+  createdAt: text('created_at')
+    .notNull()
+    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+});
 
 // ---------------------------------------------------------------------------
 // Benefits
