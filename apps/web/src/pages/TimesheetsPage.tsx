@@ -1,4 +1,4 @@
-import type { SaveTimesheetInput, Timesheet } from '@carrier-hr/shared';
+import type { SaveTimesheetInput, Timesheet } from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Send, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';

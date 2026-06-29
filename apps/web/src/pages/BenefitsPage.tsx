@@ -1,4 +1,4 @@
-import type { BenefitEnrollment, BenefitPlan, EnrollBenefitInput } from '@carrier-hr/shared';
+import type { BenefitEnrollment, BenefitPlan, EnrollBenefitInput } from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { HeartPulse } from 'lucide-react';
 import { Badge, statusTone } from '../components/ui/Badge';
@@ -49,7 +49,7 @@ export function BenefitsPage() {
                   enrollment ? (
                     <Badge tone={statusTone(enrollment.status)}>{titleCase(enrollment.status)}</Badge>
                   ) : (
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-carrier-50 text-carrier-700">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-collins-50 text-collins-700">
                       <HeartPulse className="h-4 w-4" />
                     </span>
                   )

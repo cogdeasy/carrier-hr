@@ -7,7 +7,7 @@ import type {
   SubmitManagerReviewInput,
   SubmitSelfReviewInput,
   UpdateGoalInput,
-} from '@carrier-hr/shared';
+} from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { employees, goals, reviewCycles, reviews } from '../db/schema.js';
 import { BadRequest, Forbidden, NotFound } from '../lib/errors.js';

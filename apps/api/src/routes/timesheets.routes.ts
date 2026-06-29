@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { decideTimesheetSchema, hasPermission, saveTimesheetSchema } from '@carrier-hr/shared';
+import { decideTimesheetSchema, hasPermission, saveTimesheetSchema } from '@collins-hr/shared';
 import { eq } from 'drizzle-orm';
 import { employees } from '../db/schema.js';
 import { parse } from '../lib/validate.js';

@@ -1,5 +1,5 @@
 import { and, desc, eq } from 'drizzle-orm';
-import type { Notification, NotificationType } from '@carrier-hr/shared';
+import type { Notification, NotificationType } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { notifications } from '../db/schema.js';
 import { NotFound } from '../lib/errors.js';

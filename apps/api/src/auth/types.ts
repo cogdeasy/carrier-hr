@@ -1,4 +1,4 @@
-import type { Permission, Role } from '@carrier-hr/shared';
+import type { Permission, Role } from '@collins-hr/shared';
 
 /** Decoded JWT payload stored in the signed token. */
 export interface JwtPayload {

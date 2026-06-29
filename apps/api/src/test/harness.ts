@@ -1,6 +1,6 @@
 import { migrate } from 'drizzle-orm/libsql/migrator';
 import type { FastifyInstance } from 'fastify';
-import type { Role } from '@carrier-hr/shared';
+import type { Role } from '@collins-hr/shared';
 import { buildApp } from '../app.js';
 import { hashPassword } from '../auth/password.js';
 import { createInMemoryDb, type Database } from '../db/client.js';

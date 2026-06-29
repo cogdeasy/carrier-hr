@@ -1,4 +1,4 @@
-import type { Role } from '@carrier-hr/shared';
+import type { Role } from '@collins-hr/shared';
 import { getEnv } from '../env.js';
 import { hashPassword } from '../auth/password.js';
 import { businessDaysBetween } from '../lib/dates.js';
@@ -9,6 +9,7 @@ import {
   BENEFIT_PLANS,
   COURSES,
   DEPARTMENTS,
+  DIVISIONS,
   FIRST_NAMES,
   HOLIDAYS_2026,
   LAST_NAMES,
@@ -74,17 +75,22 @@ function addEmployee(e: Omit<SeedEmployee, 'id' | 'employeeNumber'> & { id?: str
 }
 
 function makeEmail(first: string, last: string): string {
-  return `${first}.${last}`.toLowerCase().replace(/[^a-z.]/gu, '') + '@carrier.com';
+  return `${first}.${last}`.toLowerCase().replace(/[^a-z.]/gu, '') + '@collins.com';
+}
+
+function divisionForDepartment(department: string, index: number): string {
+  if (department === 'Executive' || department === 'Human Resources') return 'Corporate';
+  return DIVISIONS[index % DIVISIONS.length]!;
 }
 
 function buildOrg(): void {
   // --- Leadership & stable personas (used for login + e2e tests) ---
   const ceo = addEmployee({
     id: createId('emp'),
-    firstName: 'David',
-    lastName: 'Gitlin',
-    email: 'david.gitlin@carrier.com',
-    jobTitle: 'Chief Executive Officer',
+    firstName: 'Troy',
+    lastName: 'Brunk',
+    email: 'troy.brunk@collins.com',
+    jobTitle: 'President, Collins Aerospace',
     department: 'Executive',
     location: LOCATIONS[0]!,
     managerId: null,
@@ -98,7 +104,7 @@ function buildOrg(): void {
   const admin = addEmployee({
     firstName: 'Ada',
     lastName: 'Sysadmin',
-    email: 'admin@carrier.com',
+    email: 'admin@collins.com',
     jobTitle: 'IT Director',
     department: 'Information Technology',
     location: LOCATIONS[0]!,
@@ -113,7 +119,7 @@ function buildOrg(): void {
   const hrHead = addEmployee({
     firstName: 'Patricia',
     lastName: 'Reyes',
-    email: 'hr.admin@carrier.com',
+    email: 'hr.admin@collins.com',
     jobTitle: 'Chief Human Resources Officer',
     department: 'Human Resources',
     location: LOCATIONS[0]!,
@@ -128,7 +134,7 @@ function buildOrg(): void {
   const recruiter = addEmployee({
     firstName: 'Rachel',
     lastName: 'Greene',
-    email: 'recruiter@carrier.com',
+    email: 'recruiter@collins.com',
     jobTitle: 'Talent Acquisition Lead',
     department: 'Human Resources',
     location: LOCATIONS[1]!,
@@ -143,7 +149,7 @@ function buildOrg(): void {
   const engManager = addEmployee({
     firstName: 'Michael',
     lastName: 'Chen',
-    email: 'manager@carrier.com',
+    email: 'manager@collins.com',
     jobTitle: 'Engineering Manager',
     department: 'Engineering',
     location: LOCATIONS[1]!,
@@ -158,7 +164,7 @@ function buildOrg(): void {
   const employee = addEmployee({
     firstName: 'Emma',
     lastName: 'Wilson',
-    email: 'employee@carrier.com',
+    email: 'employee@collins.com',
     jobTitle: 'Senior Software Engineer',
     department: 'Engineering',
     location: LOCATIONS[1]!,
@@ -223,17 +229,17 @@ function buildOrg(): void {
 
 async function insertEmployees(db: Database): Promise<void> {
   const password = getEnv().SEED_DEFAULT_PASSWORD;
-  for (const e of employees) {
+  for (const [i, e] of employees.entries()) {
     await db.insert(t.employees).values({
       id: e.id,
       employeeNumber: e.employeeNumber,
       firstName: e.firstName,
       lastName: e.lastName,
       email: e.email,
-      workPhone: `+1-561-555-${String(randInt(1000, 9999))}`,
+      workPhone: `+1-319-555-${String(randInt(1000, 9999))}`,
       jobTitle: e.jobTitle,
       department: e.department,
-      division: 'Carrier',
+      division: divisionForDepartment(e.department, i),
       location: e.location,
       employmentType: 'full_time',
       status: e.status,
@@ -298,7 +304,7 @@ async function seedSupporting(db: Database): Promise<void> {
       title: c.title,
       category: c.category,
       description: c.description,
-      provider: 'Carrier University',
+      provider: 'Collins Aerospace University',
       durationMinutes: c.durationMinutes,
       required: c.required,
     });
@@ -459,7 +465,7 @@ async function seedSupporting(db: Database): Promise<void> {
   }
 
   // Recruiting: jobs + candidates
-  const recruiter = employees.find((e) => e.email === 'recruiter@carrier.com')!;
+  const recruiter = employees.find((e) => e.email === 'recruiter@collins.com')!;
   for (let j = 0; j < 8; j += 1) {
     const dept = pick(DEPARTMENTS.filter((d) => d !== 'Executive'));
     const titles = TITLES_BY_DEPARTMENT[dept] ?? ['Specialist'];
@@ -472,7 +478,7 @@ async function seedSupporting(db: Database): Promise<void> {
       location: pick(LOCATIONS),
       employmentType: 'full_time',
       status: pick(['open', 'open', 'draft', 'closed']),
-      description: 'We are seeking a talented professional to join our growing team at Carrier.',
+      description: 'We are seeking a talented professional to join our growing team at Collins Aerospace.',
       recruiterId: recruiter.id,
       openings: randInt(1, 3),
       postedDate: daysAgo(randInt(3, 45)),
@@ -525,19 +531,19 @@ async function seedSupporting(db: Database): Promise<void> {
     category: 'Policy',
     contentType: 'application/pdf',
     sizeBytes: 2_400_000,
-    url: 'https://files.carrier.example/handbook-2026.pdf',
+    url: 'https://files.collins.example/handbook-2026.pdf',
     requiresSignature: true,
-    uploadedById: employees.find((e) => e.email === 'hr.admin@carrier.com')!.id,
+    uploadedById: employees.find((e) => e.email === 'hr.admin@collins.com')!.id,
   });
 
   // Notifications for the demo employee + manager
-  const emp = employees.find((e) => e.email === 'employee@carrier.com')!;
-  const mgr = employees.find((e) => e.email === 'manager@carrier.com')!;
+  const emp = employees.find((e) => e.email === 'employee@collins.com')!;
+  const mgr = employees.find((e) => e.email === 'manager@collins.com')!;
   await db.insert(t.notifications).values({
     id: createId('ntf'),
     employeeId: emp.id,
     type: 'announcement',
-    title: 'Welcome to Carrier HR',
+    title: 'Welcome to Collins Aerospace HR',
     body: 'Open enrollment for 2026 benefits is now available.',
     link: '/benefits',
     read: false,
@@ -562,12 +568,12 @@ async function main(): Promise<void> {
   await seedSupporting(db);
   console.log('Seed complete.');
   console.log('Logins (password = SEED_DEFAULT_PASSWORD):');
-  console.log('  admin@carrier.com (super_admin)');
-  console.log('  david.gitlin@carrier.com (executive)');
-  console.log('  hr.admin@carrier.com (hr_admin)');
-  console.log('  recruiter@carrier.com (recruiter)');
-  console.log('  manager@carrier.com (manager)');
-  console.log('  employee@carrier.com (employee)');
+  console.log('  admin@collins.com (super_admin)');
+  console.log('  troy.brunk@collins.com (executive)');
+  console.log('  hr.admin@collins.com (hr_admin)');
+  console.log('  recruiter@collins.com (recruiter)');
+  console.log('  manager@collins.com (manager)');
+  console.log('  employee@collins.com (employee)');
   getClient().close();
 }
 

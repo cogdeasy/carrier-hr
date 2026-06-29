@@ -6,8 +6,8 @@ describe('employee directory & RBAC', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    await seedUser(ctx.db, { email: 'hr@carrier.com', roles: ['hr_admin'] });
-    await seedUser(ctx.db, { email: 'worker@carrier.com', roles: ['employee'] });
+    await seedUser(ctx.db, { email: 'hr@collins.com', roles: ['hr_admin'] });
+    await seedUser(ctx.db, { email: 'worker@collins.com', roles: ['employee'] });
   });
 
   afterAll(async () => {
@@ -15,7 +15,7 @@ describe('employee directory & RBAC', () => {
   });
 
   it('returns a paginated directory to authenticated users', async () => {
-    const token = await login(ctx.app, 'worker@carrier.com');
+    const token = await login(ctx.app, 'worker@collins.com');
     const res = await ctx.app.inject({
       method: 'GET',
       url: '/api/employees?pageSize=10',
@@ -28,7 +28,7 @@ describe('employee directory & RBAC', () => {
   });
 
   it('forbids a regular employee from creating employees', async () => {
-    const token = await login(ctx.app, 'worker@carrier.com');
+    const token = await login(ctx.app, 'worker@collins.com');
     const res = await ctx.app.inject({
       method: 'POST',
       url: '/api/employees',
@@ -36,10 +36,10 @@ describe('employee directory & RBAC', () => {
       payload: {
         firstName: 'New',
         lastName: 'Hire',
-        email: 'new.hire@carrier.com',
+        email: 'new.hire@collins.com',
         jobTitle: 'Analyst',
         department: 'Finance',
-        division: 'Carrier',
+        division: 'Avionics',
         location: 'Charlotte, NC',
         hireDate: '2026-01-15',
         employmentType: 'full_time',
@@ -49,7 +49,7 @@ describe('employee directory & RBAC', () => {
   });
 
   it('allows an HR admin to create an employee', async () => {
-    const token = await login(ctx.app, 'hr@carrier.com');
+    const token = await login(ctx.app, 'hr@collins.com');
     const res = await ctx.app.inject({
       method: 'POST',
       url: '/api/employees',
@@ -57,23 +57,23 @@ describe('employee directory & RBAC', () => {
       payload: {
         firstName: 'New',
         lastName: 'Hire',
-        email: 'new.hire@carrier.com',
+        email: 'new.hire@collins.com',
         jobTitle: 'Analyst',
         department: 'Finance',
-        division: 'Carrier',
+        division: 'Avionics',
         location: 'Charlotte, NC',
         hireDate: '2026-01-15',
         employmentType: 'full_time',
       },
     });
     expect(res.statusCode).toBe(201);
-    expect(res.json().email).toBe('new.hire@carrier.com');
+    expect(res.json().email).toBe('new.hire@collins.com');
     expect(res.json().employeeNumber).toBeTypeOf('string');
     expect(res.json().temporaryPassword).toBeTypeOf('string');
   });
 
   it('provisions a mixed-case email account that can log in (email normalized)', async () => {
-    const token = await login(ctx.app, 'hr@carrier.com');
+    const token = await login(ctx.app, 'hr@collins.com');
     const created = await ctx.app.inject({
       method: 'POST',
       url: '/api/employees',
@@ -81,27 +81,27 @@ describe('employee directory & RBAC', () => {
       payload: {
         firstName: 'Mixed',
         lastName: 'Case',
-        email: 'Mixed.Case@Carrier.com',
+        email: 'Mixed.Case@Collins.com',
         jobTitle: 'Analyst',
         department: 'Finance',
-        division: 'Carrier',
+        division: 'Avionics',
         location: 'Charlotte, NC',
         hireDate: '2026-01-15',
         employmentType: 'full_time',
       },
     });
     expect(created.statusCode).toBe(201);
-    expect(created.json().email).toBe('mixed.case@carrier.com');
+    expect(created.json().email).toBe('mixed.case@collins.com');
     const tempPassword = created.json().temporaryPassword as string;
 
     // The generated account can authenticate with the normalized email.
-    await expect(login(ctx.app, 'mixed.case@carrier.com', tempPassword)).resolves.toBeTypeOf(
+    await expect(login(ctx.app, 'mixed.case@collins.com', tempPassword)).resolves.toBeTypeOf(
       'string',
     );
   });
 
   it('keeps login working after an email change (users table stays in sync)', async () => {
-    const hrToken = await login(ctx.app, 'hr@carrier.com');
+    const hrToken = await login(ctx.app, 'hr@collins.com');
     const created = await ctx.app.inject({
       method: 'POST',
       url: '/api/employees',
@@ -109,10 +109,10 @@ describe('employee directory & RBAC', () => {
       payload: {
         firstName: 'Rename',
         lastName: 'Me',
-        email: 'rename.me@carrier.com',
+        email: 'rename.me@collins.com',
         jobTitle: 'Analyst',
         department: 'Finance',
-        division: 'Carrier',
+        division: 'Avionics',
         location: 'Charlotte, NC',
         hireDate: '2026-01-15',
         employmentType: 'full_time',
@@ -124,15 +124,15 @@ describe('employee directory & RBAC', () => {
       method: 'PATCH',
       url: `/api/employees/${id}`,
       headers: authHeader(hrToken),
-      payload: { email: 'Renamed.Person@Carrier.com' },
+      payload: { email: 'Renamed.Person@Collins.com' },
     });
     expect(updated.statusCode).toBe(200);
-    expect(updated.json().email).toBe('renamed.person@carrier.com');
+    expect(updated.json().email).toBe('renamed.person@collins.com');
 
     // Login must follow the new address; the old one no longer resolves.
     await expect(
-      login(ctx.app, 'renamed.person@carrier.com', temporaryPassword),
+      login(ctx.app, 'renamed.person@collins.com', temporaryPassword),
     ).resolves.toBeTypeOf('string');
-    await expect(login(ctx.app, 'rename.me@carrier.com', temporaryPassword)).rejects.toThrow();
+    await expect(login(ctx.app, 'rename.me@collins.com', temporaryPassword)).rejects.toThrow();
   });
 });

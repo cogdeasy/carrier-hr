@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import type { BenefitEnrollment, BenefitPlan, EnrollBenefitInput } from '@carrier-hr/shared';
+import type { BenefitEnrollment, BenefitPlan, EnrollBenefitInput } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { benefitEnrollments, benefitPlans } from '../db/schema.js';
 import { NotFound } from '../lib/errors.js';

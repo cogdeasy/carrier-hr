@@ -1,5 +1,5 @@
 {
-  "name": "@carrier-hr/web",
+  "name": "@collins-hr/web",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "e2e:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
-    "@carrier-hr/shared": "workspace:*",
+    "@collins-hr/shared": "workspace:*",
     "@tanstack/react-query": "^5.59.16",
     "clsx": "^2.1.1",
     "lucide-react": "^0.454.0",
@@ -24,7 +24,7 @@
     "recharts": "^2.13.0"
   },
   "devDependencies": {
-    "@carrier-hr/eslint-config": "workspace:*",
+    "@collins-hr/eslint-config": "workspace:*",
     "@playwright/test": "^1.48.2",
     "@types/node": "^22.8.6",
     "@types/react": "^19.0.1",

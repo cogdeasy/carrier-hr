@@ -1,4 +1,4 @@
-import type { HrDocument } from '@carrier-hr/shared';
+import type { HrDocument } from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, PenLine } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';

@@ -1,13 +1,24 @@
-/** Static reference data for the Carrier HR seed. */
+/** Static reference data for the Collins Aerospace HR seed. */
 
 export const LOCATIONS = [
-  'Palm Beach Gardens, FL',
-  'Indianapolis, IN',
   'Charlotte, NC',
-  'Syracuse, NY',
-  'Farmington, CT',
-  'Monterrey, MX',
-  'Shanghai, CN',
+  'Cedar Rapids, IA',
+  'Windsor Locks, CT',
+  'Rockford, IL',
+  'Richardson, TX',
+  'Phoenix, AZ',
+  'Reading, UK',
+  'Toulouse, FR',
+];
+
+// Collins Aerospace strategic business units.
+export const DIVISIONS = [
+  'Avionics',
+  'Mission Systems',
+  'Power & Controls',
+  'Interiors',
+  'Aerostructures',
+  'Connected Aviation Solutions',
 ];
 
 export const DEPARTMENTS = [
@@ -62,7 +73,7 @@ export const TITLES_BY_DEPARTMENT: Record<string, string[]> = {
 export const BENEFIT_PLANS = [
   {
     type: 'medical' as const,
-    name: 'Carrier PPO Premier',
+    name: 'Collins PPO Premier',
     carrier: 'UnitedHealthcare',
     description: 'Comprehensive PPO with nationwide network and low deductibles.',
     monthlyPremiumCents: 62000,
@@ -71,7 +82,7 @@ export const BENEFIT_PLANS = [
   },
   {
     type: 'medical' as const,
-    name: 'Carrier HDHP + HSA',
+    name: 'Collins HDHP + HSA',
     carrier: 'UnitedHealthcare',
     description: 'High-deductible health plan paired with a tax-advantaged HSA.',
     monthlyPremiumCents: 41000,
@@ -107,7 +118,7 @@ export const BENEFIT_PLANS = [
   },
   {
     type: 'retirement_401k' as const,
-    name: 'Carrier 401(k) Savings Plan',
+    name: 'Collins 401(k) Savings Plan',
     carrier: 'Fidelity',
     description: 'Pre-tax and Roth contributions with 6% company match.',
     monthlyPremiumCents: 0,
@@ -122,7 +133,7 @@ export const COURSES = [
   { title: 'Information Security Awareness', category: 'Security', required: true, durationMinutes: 30, description: 'Phishing, data handling and security best practices.' },
   { title: 'Preventing Workplace Harassment', category: 'Compliance', required: true, durationMinutes: 50, description: 'Respectful workplace and anti-harassment training.' },
   { title: 'Leadership Essentials', category: 'Leadership', required: false, durationMinutes: 120, description: 'Core people-management skills for new managers.' },
-  { title: 'Refrigeration Systems 101', category: 'Technical', required: false, durationMinutes: 90, description: 'Fundamentals of HVAC and refrigeration technology.' },
+  { title: 'Aerospace Systems Fundamentals', category: 'Technical', required: false, durationMinutes: 90, description: 'Introduction to avionics, mission systems and aircraft integration.' },
   { title: 'Lean Six Sigma Yellow Belt', category: 'Operations', required: false, durationMinutes: 180, description: 'Process improvement methodology and tools.' },
   { title: 'Effective Communication', category: 'Professional', required: false, durationMinutes: 75, description: 'Written and verbal communication in the workplace.' },
 ];

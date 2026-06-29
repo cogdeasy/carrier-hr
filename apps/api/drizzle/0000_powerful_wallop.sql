@@ -87,7 +87,7 @@ CREATE TABLE `courses` (
 	`title` text NOT NULL,
 	`category` text NOT NULL,
 	`description` text NOT NULL,
-	`provider` text DEFAULT 'Carrier University' NOT NULL,
+	`provider` text DEFAULT 'Collins Aerospace University' NOT NULL,
 	`duration_minutes` integer DEFAULT 30 NOT NULL,
 	`required` integer DEFAULT false NOT NULL,
 	`created_at` text DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')) NOT NULL
@@ -120,7 +120,7 @@ CREATE TABLE `employees` (
 	`personal_phone` text,
 	`job_title` text NOT NULL,
 	`department` text NOT NULL,
-	`division` text DEFAULT 'Carrier' NOT NULL,
+	`division` text DEFAULT 'Collins Aerospace' NOT NULL,
 	`location` text NOT NULL,
 	`employment_type` text DEFAULT 'full_time' NOT NULL,
 	`status` text DEFAULT 'active' NOT NULL,

@@ -1,4 +1,4 @@
-import type { CreateEmployeeInput, Employee, Paginated } from '@carrier-hr/shared';
+import type { CreateEmployeeInput, Employee, Paginated } from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Users } from 'lucide-react';
 import { FormEvent, useState } from 'react';
@@ -57,7 +57,7 @@ export function DirectoryPage() {
     <div>
       <PageHeader
         title="Employee Directory"
-        description="Find and connect with people across Carrier."
+        description="Find and connect with people across Collins Aerospace."
         actions={
           can('employee:write') ? (
             <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setCreateOpen(true)}>
@@ -198,7 +198,7 @@ function CreateEmployeeModal({ open, onClose }: { open: boolean; onClose: () => 
     email: '',
     jobTitle: '',
     department: 'Engineering',
-    division: 'Carrier',
+    division: 'Collins Aerospace',
     location: 'Palm Beach Gardens, FL',
     employmentType: 'full_time',
     hireDate: new Date().toISOString().slice(0, 10),

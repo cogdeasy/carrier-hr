@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { enrollBenefitSchema } from '@carrier-hr/shared';
+import { enrollBenefitSchema } from '@collins-hr/shared';
 import { parse } from '../lib/validate.js';
 import { enroll, listEnrollments, listPlans } from '../services/benefits.service.js';
 

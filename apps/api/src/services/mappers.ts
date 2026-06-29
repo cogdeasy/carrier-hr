@@ -20,7 +20,7 @@ import type {
   TimeOffRequest,
   Timesheet,
   TimesheetEntry,
-} from '@carrier-hr/shared';
+} from '@collins-hr/shared';
 import type { InferSelectModel } from 'drizzle-orm';
 import type * as schema from '../db/schema.js';
 

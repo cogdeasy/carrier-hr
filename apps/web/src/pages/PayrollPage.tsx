@@ -1,4 +1,4 @@
-import type { Compensation, Payslip } from '@carrier-hr/shared';
+import type { Compensation, Payslip } from '@collins-hr/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Wallet } from 'lucide-react';
 import { useState } from 'react';

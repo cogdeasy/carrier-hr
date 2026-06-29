@@ -18,7 +18,7 @@ export function StatCard({
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-slate-500">{label}</p>
         {Icon ? (
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-carrier-50 text-carrier-700">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-collins-50 text-collins-700">
             <Icon className="h-5 w-5" />
           </span>
         ) : null}

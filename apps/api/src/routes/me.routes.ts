@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { updateEmployeeSchema } from '@carrier-hr/shared';
+import { updateEmployeeSchema } from '@collins-hr/shared';
 import { parse } from '../lib/validate.js';
 import { getEmployeeDashboard } from '../services/analytics.service.js';
 import { getEmployee, updateEmployee } from '../services/employee.service.js';

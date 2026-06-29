@@ -32,7 +32,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build shared package
-        run: pnpm --filter @carrier-hr/shared build
+        run: pnpm --filter @collins-hr/shared build
 
       - name: Lint
         run: pnpm -r lint
@@ -65,11 +65,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build shared package
-        run: pnpm --filter @carrier-hr/shared build
+        run: pnpm --filter @collins-hr/shared build
 
       - name: Build web app
         # Demo account quick-fill panel is required by the e2e auth flow.
-        run: pnpm --filter @carrier-hr/web build
+        run: pnpm --filter @collins-hr/web build
         env:
           VITE_DEMO_MODE: 'true'
 
@@ -80,10 +80,10 @@ jobs:
           pnpm db:seed
 
       - name: Install Playwright browsers
-        run: pnpm --filter @carrier-hr/web e2e:install
+        run: pnpm --filter @collins-hr/web e2e:install
 
       - name: Run e2e tests
-        run: pnpm --filter @carrier-hr/web e2e
+        run: pnpm --filter @collins-hr/web e2e
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}

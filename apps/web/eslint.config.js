@@ -1,4 +1,4 @@
-import react from '@carrier-hr/eslint-config/react';
+import react from '@collins-hr/eslint-config/react';
 
 export default [
   ...react,

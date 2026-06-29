@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /**
- * Full relational schema for the Carrier HR platform.
+ * Full relational schema for the Collins Aerospace HR platform.
  *
  * SQLite is used for portability (embedded file locally, Turso/libSQL in prod).
  * JSON-shaped columns are stored as TEXT and parsed/validated at the service
@@ -34,7 +34,7 @@ export const employees = sqliteTable(
     personalPhone: text('personal_phone'),
     jobTitle: text('job_title').notNull(),
     department: text('department').notNull(),
-    division: text('division').notNull().default('Carrier'),
+    division: text('division').notNull().default('Collins Aerospace'),
     location: text('location').notNull(),
     employmentType: text('employment_type').notNull().default('full_time'),
     status: text('status').notNull().default('active'),
@@ -420,7 +420,7 @@ export const courses = sqliteTable('courses', {
   title: text('title').notNull(),
   category: text('category').notNull(),
   description: text('description').notNull(),
-  provider: text('provider').notNull().default('Carrier University'),
+  provider: text('provider').notNull().default('Collins Aerospace University'),
   durationMinutes: integer('duration_minutes').notNull().default(30),
   required: integer('required', { mode: 'boolean' }).notNull().default(false),
   createdAt: text('created_at')

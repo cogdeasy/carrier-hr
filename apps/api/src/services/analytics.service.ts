@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import type { EmployeeDashboard, HrDashboard } from '@carrier-hr/shared';
+import type { EmployeeDashboard, HrDashboard } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import {
   companyHolidays,

@@ -1,4 +1,4 @@
-import type { Course, CourseEnrollment } from '@carrier-hr/shared';
+import type { Course, CourseEnrollment } from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { GraduationCap } from 'lucide-react';
 import { Badge, statusTone } from '../components/ui/Badge';
@@ -67,7 +67,7 @@ export function LearningPage() {
                     </div>
                     <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
                       <div
-                        className="h-full rounded-full bg-carrier-600"
+                        className="h-full rounded-full bg-collins-600"
                         style={{ width: `${enrollment.progress}%` }}
                       />
                     </div>

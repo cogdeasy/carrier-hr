@@ -6,8 +6,8 @@ import type {
   TimeOffBalance,
   TimeOffRequest,
   TimeOffType,
-} from '@carrier-hr/shared';
-import { TIME_OFF_TYPES } from '@carrier-hr/shared';
+} from '@collins-hr/shared';
+import { TIME_OFF_TYPES } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import {
   companyHolidays,

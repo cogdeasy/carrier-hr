@@ -1,4 +1,4 @@
-import type { Candidate, JobRequisition } from '@carrier-hr/shared';
+import type { Candidate, JobRequisition } from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Briefcase } from 'lucide-react';
 import { useState } from 'react';

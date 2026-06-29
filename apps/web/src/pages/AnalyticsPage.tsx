@@ -1,4 +1,4 @@
-import type { HrDashboard } from '@carrier-hr/shared';
+import type { HrDashboard } from '@collins-hr/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Building2, TrendingDown, UserPlus, Users } from 'lucide-react';
 import {

@@ -6,7 +6,7 @@ import {
   submitManagerReviewSchema,
   submitSelfReviewSchema,
   updateGoalSchema,
-} from '@carrier-hr/shared';
+} from '@collins-hr/shared';
 import { parse } from '../lib/validate.js';
 import { Forbidden } from '../lib/errors.js';
 import { listDirectReports } from '../services/employee.service.js';

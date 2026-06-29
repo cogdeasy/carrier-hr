@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'carrier_hr_token';
+const TOKEN_KEY = 'collins_hr_token';
 
 let inMemoryToken: string | null =
   typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;

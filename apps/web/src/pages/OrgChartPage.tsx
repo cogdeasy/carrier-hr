@@ -1,4 +1,4 @@
-import type { OrgNode } from '@carrier-hr/shared';
+import type { OrgNode } from '@collins-hr/shared';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
@@ -19,7 +19,7 @@ export function OrgChartPage() {
 
   return (
     <div>
-      <PageHeader title="Org Chart" description="Explore Carrier's reporting structure." />
+      <PageHeader title="Org Chart" description="Explore Collins Aerospace's reporting structure." />
       <Card>
         <CardBody>
           {roots.map((node) => (

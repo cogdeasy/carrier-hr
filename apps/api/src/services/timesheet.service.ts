@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
-import type { DecideTimesheetInput, SaveTimesheetInput, Timesheet } from '@carrier-hr/shared';
+import type { DecideTimesheetInput, SaveTimesheetInput, Timesheet } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { timesheetEntries, timesheets } from '../db/schema.js';
 import { BadRequest, Forbidden, NotFound } from '../lib/errors.js';

@@ -8,7 +8,7 @@ describe('auth routes', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    await seedUser(ctx.db, { email: 'employee@carrier.com', roles: ['employee'] });
+    await seedUser(ctx.db, { email: 'employee@collins.com', roles: ['employee'] });
   });
 
   afterAll(async () => {
@@ -19,7 +19,7 @@ describe('auth routes', () => {
     const res = await ctx.app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: 'employee@carrier.com', password: 'wrong' },
+      payload: { email: 'employee@collins.com', password: 'wrong' },
     });
     expect(res.statusCode).toBe(401);
   });
@@ -28,12 +28,12 @@ describe('auth routes', () => {
     const res = await ctx.app.inject({
       method: 'POST',
       url: '/api/auth/login',
-      payload: { email: 'employee@carrier.com', password: 'Password123!' },
+      payload: { email: 'employee@collins.com', password: 'Password123!' },
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.token).toBeTypeOf('string');
-    expect(body.user.email).toBe('employee@carrier.com');
+    expect(body.user.email).toBe('employee@collins.com');
     expect(body.permissions).toContain('timeoff:request');
   });
 
@@ -43,19 +43,19 @@ describe('auth routes', () => {
   });
 
   it('returns the current session for an authenticated user', async () => {
-    const token = await login(ctx.app, 'employee@carrier.com');
+    const token = await login(ctx.app, 'employee@collins.com');
     const res = await ctx.app.inject({
       method: 'GET',
       url: '/api/auth/session',
       headers: authHeader(token),
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json().user.email).toBe('employee@carrier.com');
+    expect(res.json().user.email).toBe('employee@collins.com');
   });
 
   it('allows changing the password and logging in with the new one', async () => {
-    await seedUser(ctx.db, { email: 'changer@carrier.com', roles: ['employee'] });
-    const token = await login(ctx.app, 'changer@carrier.com');
+    await seedUser(ctx.db, { email: 'changer@collins.com', roles: ['employee'] });
+    const token = await login(ctx.app, 'changer@collins.com');
     const res = await ctx.app.inject({
       method: 'POST',
       url: '/api/auth/change-password',
@@ -67,18 +67,18 @@ describe('auth routes', () => {
       },
     });
     expect(res.statusCode).toBe(200);
-    await expect(login(ctx.app, 'changer@carrier.com', 'NewPassword456!')).resolves.toBeTypeOf(
+    await expect(login(ctx.app, 'changer@collins.com', 'NewPassword456!')).resolves.toBeTypeOf(
       'string',
     );
   });
 
   it('blocks a user with a pending password change from other routes until they rotate it', async () => {
-    const seeded = await seedUser(ctx.db, { email: 'temp@carrier.com', roles: ['employee'] });
+    const seeded = await seedUser(ctx.db, { email: 'temp@collins.com', roles: ['employee'] });
     await ctx.db
       .update(users)
       .set({ mustChangePassword: true })
       .where(eq(users.id, seeded.userId));
-    const token = await login(ctx.app, 'temp@carrier.com');
+    const token = await login(ctx.app, 'temp@collins.com');
 
     // Any normal route is forbidden while the temporary password stands.
     const blocked = await ctx.app.inject({
@@ -111,7 +111,7 @@ describe('auth routes', () => {
     });
     expect(changed.statusCode).toBe(200);
 
-    const newToken = await login(ctx.app, 'temp@carrier.com', 'NewPassword456!');
+    const newToken = await login(ctx.app, 'temp@collins.com', 'NewPassword456!');
     const allowed = await ctx.app.inject({
       method: 'GET',
       url: '/api/me',

@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        carrier: {
+        collins: {
           50: '#eef3ff',
           100: '#d9e3ff',
           200: '#bccdff',

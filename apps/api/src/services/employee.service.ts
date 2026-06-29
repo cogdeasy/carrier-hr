@@ -6,7 +6,7 @@ import type {
   Paginated,
   Role,
   UpdateEmployeeInput,
-} from '@carrier-hr/shared';
+} from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { employees, userRoles, users } from '../db/schema.js';
 import { Conflict, NotFound } from '../lib/errors.js';

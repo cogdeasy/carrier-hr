@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { hasPermission } from '@carrier-hr/shared';
+import { hasPermission } from '@collins-hr/shared';
 import { parse } from '../lib/validate.js';
 import { getCompensation, getPayslip, listPayslips } from '../services/payroll.service.js';
 

@@ -1,4 +1,4 @@
-import type { Paginated } from '@carrier-hr/shared';
+import type { Paginated } from '@collins-hr/shared';
 
 export function paginate<T>(rows: T[], total: number, page: number, pageSize: number): Paginated<T> {
   return {

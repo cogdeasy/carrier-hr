@@ -12,13 +12,13 @@ describe('performance review lifecycle', () => {
   beforeAll(async () => {
     ctx = await createTestApp();
     manager = await seedUser(ctx.db, {
-      email: 'pmgr@carrier.com',
+      email: 'pmgr@collins.com',
       roles: ['manager'],
       firstName: 'Pat',
       lastName: 'Manager',
     });
     employee = await seedUser(ctx.db, {
-      email: 'pemp@carrier.com',
+      email: 'pemp@collins.com',
       roles: ['employee'],
       firstName: 'Sam',
       lastName: 'Subject',
@@ -71,7 +71,7 @@ describe('performance review lifecycle', () => {
 
   it('exposes the cycle name on listed reviews', async () => {
     await seedReview('self_review');
-    const token = await login(ctx.app, 'pemp@carrier.com');
+    const token = await login(ctx.app, 'pemp@collins.com');
     const res = await ctx.app.inject({
       method: 'GET',
       url: '/api/performance/reviews',
@@ -84,7 +84,7 @@ describe('performance review lifecycle', () => {
 
   it('walks the happy path self -> manager -> completed', async () => {
     const id = await seedReview('self_review', null, await seedCycle('Annual Review 2026'));
-    const empToken = await login(ctx.app, 'pemp@carrier.com');
+    const empToken = await login(ctx.app, 'pemp@collins.com');
     const self = await ctx.app.inject({
       method: 'POST',
       url: `/api/performance/reviews/${id}/self`,
@@ -94,7 +94,7 @@ describe('performance review lifecycle', () => {
     expect(self.statusCode).toBe(200);
     expect(self.json().status).toBe('manager_review');
 
-    const mgrToken = await login(ctx.app, 'pmgr@carrier.com');
+    const mgrToken = await login(ctx.app, 'pmgr@collins.com');
     const mgr = await ctx.app.inject({
       method: 'POST',
       url: `/api/performance/reviews/${id}/manager`,
@@ -107,7 +107,7 @@ describe('performance review lifecycle', () => {
 
   it('rejects a self-assessment that would regress a completed review', async () => {
     const id = await seedReview('completed', 'original self', await seedCycle('Q1 Review 2026'));
-    const empToken = await login(ctx.app, 'pemp@carrier.com');
+    const empToken = await login(ctx.app, 'pemp@collins.com');
     const res = await ctx.app.inject({
       method: 'POST',
       url: `/api/performance/reviews/${id}/self`,
@@ -119,7 +119,7 @@ describe('performance review lifecycle', () => {
 
   it('rejects a manager re-submission on a completed review', async () => {
     const id = await seedReview('completed', 'submitted self', await seedCycle('Q2 Review 2026'));
-    const mgrToken = await login(ctx.app, 'pmgr@carrier.com');
+    const mgrToken = await login(ctx.app, 'pmgr@collins.com');
     const res = await ctx.app.inject({
       method: 'POST',
       url: `/api/performance/reviews/${id}/manager`,

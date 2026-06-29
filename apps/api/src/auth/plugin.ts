@@ -2,7 +2,7 @@ import fastifyJwt from '@fastify/jwt';
 import type { FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 import { eq } from 'drizzle-orm';
-import { hasPermission, permissionsForRoles, type Permission } from '@carrier-hr/shared';
+import { hasPermission, permissionsForRoles, type Permission } from '@collins-hr/shared';
 import { users } from '../db/schema.js';
 import { getEnv } from '../env.js';
 import { Forbidden, Unauthorized } from '../lib/errors.js';

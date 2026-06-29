@@ -1,4 +1,4 @@
-import type { Notification } from '@carrier-hr/shared';
+import type { Notification } from '@collins-hr/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Bell, LogOut, Menu } from 'lucide-react';
 import { useState } from 'react';
@@ -58,7 +58,7 @@ export function Topbar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
                 <div className="border-b border-slate-100 px-4 py-3">
                   <p className="text-sm font-semibold text-slate-900">{user?.displayName}</p>
                   <p className="truncate text-xs text-slate-500">{user?.email}</p>
-                  <p className="mt-1 text-xs capitalize text-carrier-700">
+                  <p className="mt-1 text-xs capitalize text-collins-700">
                     {user?.roles.map((r) => r.replace(/_/g, ' ')).join(', ')}
                   </p>
                 </div>

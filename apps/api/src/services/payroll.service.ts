@@ -1,5 +1,5 @@
 import { desc, eq } from 'drizzle-orm';
-import type { Compensation, Payslip } from '@carrier-hr/shared';
+import type { Compensation, Payslip } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { compensations, payslips } from '../db/schema.js';
 import { NotFound } from '../lib/errors.js';

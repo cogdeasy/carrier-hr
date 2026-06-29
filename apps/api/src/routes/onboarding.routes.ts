@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { hasPermission, updateOnboardingTaskSchema } from '@carrier-hr/shared';
+import { hasPermission, updateOnboardingTaskSchema } from '@collins-hr/shared';
 import { parse } from '../lib/validate.js';
 import { getPlan, updateTask } from '../services/onboarding.service.js';
 

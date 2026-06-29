@@ -1,4 +1,4 @@
-import type { EmployeeDashboard } from '@carrier-hr/shared';
+import type { EmployeeDashboard } from '@collins-hr/shared';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, GraduationCap, Bell, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -84,18 +84,18 @@ export function DashboardPage() {
               <QuickLink to="/benefits" label="Manage benefits" />
             </div>
             {data.onboardingPercent !== null ? (
-              <div className="mt-4 rounded-lg bg-carrier-50 p-4">
+              <div className="mt-4 rounded-lg bg-collins-50 p-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-carrier-800">Onboarding progress</span>
-                  <span className="font-semibold text-carrier-800">{data.onboardingPercent}%</span>
+                  <span className="font-medium text-collins-800">Onboarding progress</span>
+                  <span className="font-semibold text-collins-800">{data.onboardingPercent}%</span>
                 </div>
-                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-carrier-100">
+                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-collins-100">
                   <div
-                    className="h-full rounded-full bg-carrier-600"
+                    className="h-full rounded-full bg-collins-600"
                     style={{ width: `${data.onboardingPercent}%` }}
                   />
                 </div>
-                <Link to="/onboarding" className="mt-2 inline-block text-xs font-medium text-carrier-700 hover:underline">
+                <Link to="/onboarding" className="mt-2 inline-block text-xs font-medium text-collins-700 hover:underline">
                   Continue onboarding →
                 </Link>
               </div>
@@ -111,7 +111,7 @@ function QuickLink({ to, label }: { to: string; label: string }) {
   return (
     <Link
       to={to}
-      className="rounded-lg border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-carrier-300 hover:bg-carrier-50 hover:text-carrier-700"
+      className="rounded-lg border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-collins-300 hover:bg-collins-50 hover:text-collins-700"
     >
       {label}
     </Link>

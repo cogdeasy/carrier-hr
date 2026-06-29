@@ -1,5 +1,5 @@
 import { and, desc, eq } from 'drizzle-orm';
-import type { Course, CourseEnrollment } from '@carrier-hr/shared';
+import type { Course, CourseEnrollment } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { courseEnrollments, courses } from '../db/schema.js';
 import { BadRequest, NotFound } from '../lib/errors.js';

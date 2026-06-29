@@ -1,4 +1,4 @@
-import type { Employee, EmployeeRef } from '@carrier-hr/shared';
+import type { Employee, EmployeeRef } from '@collins-hr/shared';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Mail, MapPin, Phone } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';

@@ -11,11 +11,11 @@ interface LocationState {
 }
 
 const DEMO_ACCOUNTS = [
-  { label: 'HR Admin', email: 'hr.admin@carrier.com' },
-  { label: 'Manager', email: 'manager@carrier.com' },
-  { label: 'Employee', email: 'employee@carrier.com' },
-  { label: 'Recruiter', email: 'recruiter@carrier.com' },
-  { label: 'Executive', email: 'david.gitlin@carrier.com' },
+  { label: 'HR Admin', email: 'hr.admin@collins.com' },
+  { label: 'Manager', email: 'manager@collins.com' },
+  { label: 'Employee', email: 'employee@collins.com' },
+  { label: 'Recruiter', email: 'recruiter@collins.com' },
+  { label: 'Executive', email: 'troy.brunk@collins.com' },
 ];
 
 // The demo account quick-fill panel is only rendered when VITE_DEMO_MODE is
@@ -51,18 +51,18 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen">
-      <div className="hidden flex-1 flex-col justify-between bg-carrier-700 p-12 text-white lg:flex">
+      <div className="hidden flex-1 flex-col justify-between bg-collins-700 p-12 text-white lg:flex">
         <Logo variant="light" className="h-12" />
         <div>
           <h1 className="text-4xl font-bold leading-tight">
-            The people platform for Carrier Global
+            The people platform for Collins Aerospace
           </h1>
-          <p className="mt-4 max-w-md text-carrier-100">
+          <p className="mt-4 max-w-md text-collins-100">
             One home for your team, time off, pay, benefits, performance and growth — built for the
-            53,000 people keeping the world comfortable and connected.
+            people redefining aerospace and defense.
           </p>
         </div>
-        <p className="text-sm text-carrier-200">© {new Date().getFullYear()} Carrier Global Corporation</p>
+        <p className="text-sm text-collins-200">© {new Date().getFullYear()} Collins Aerospace, an RTX business</p>
       </div>
 
       <div className="flex flex-1 items-center justify-center bg-white px-6 py-12">
@@ -71,7 +71,7 @@ export function LoginPage() {
             <Logo />
           </div>
           <h2 className="text-2xl font-bold text-slate-900">Welcome back</h2>
-          <p className="mt-1 text-sm text-slate-500">Sign in to your Carrier HR account.</p>
+          <p className="mt-1 text-sm text-slate-500">Sign in to your Collins Aerospace HR account.</p>
 
           <form onSubmit={onSubmit} className="mt-8 space-y-4">
             <Field label="Work email" htmlFor="email">
@@ -82,7 +82,7 @@ export function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@carrier.com"
+                placeholder="you@collins.com"
               />
             </Field>
             <Field label="Password" htmlFor="password">
@@ -120,7 +120,7 @@ export function LoginPage() {
                       setEmail(acct.email);
                       setPassword(DEMO_PASSWORD);
                     }}
-                    className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-carrier-300 hover:text-carrier-700"
+                    className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-collins-300 hover:text-collins-700"
                   >
                     {acct.label}
                   </button>

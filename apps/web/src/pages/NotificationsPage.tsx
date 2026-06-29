@@ -1,4 +1,4 @@
-import type { Notification } from '@carrier-hr/shared';
+import type { Notification } from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, CheckCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -72,7 +72,7 @@ export function NotificationsPage() {
                   key={n.id}
                   className={cn(
                     'flex cursor-pointer items-start gap-3 px-5 py-4 hover:bg-slate-50',
-                    !n.read && 'bg-carrier-50/40',
+                    !n.read && 'bg-collins-50/40',
                   )}
                   onClick={() => {
                     if (!n.read) markRead.mutate(n.id);
@@ -82,7 +82,7 @@ export function NotificationsPage() {
                   <span
                     className={cn(
                       'mt-1.5 h-2 w-2 shrink-0 rounded-full',
-                      n.read ? 'bg-transparent' : 'bg-carrier-600',
+                      n.read ? 'bg-transparent' : 'bg-collins-600',
                     )}
                   />
                   <div className="flex-1">

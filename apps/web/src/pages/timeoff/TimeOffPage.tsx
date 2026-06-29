@@ -2,7 +2,7 @@ import type {
   CreateTimeOffInput,
   TimeOffBalance,
   TimeOffRequest,
-} from '@carrier-hr/shared';
+} from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, Check, Plus, X } from 'lucide-react';
 import { FormEvent, useState } from 'react';
@@ -67,7 +67,7 @@ function TabButton({
       onClick={onClick}
       className={
         active
-          ? 'rounded-md bg-carrier-700 px-4 py-1.5 text-sm font-medium text-white'
+          ? 'rounded-md bg-collins-700 px-4 py-1.5 text-sm font-medium text-white'
           : 'rounded-md px-4 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900'
       }
     >

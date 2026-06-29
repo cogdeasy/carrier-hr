@@ -1,5 +1,5 @@
 {
-  "name": "@carrier-hr/shared",
+  "name": "@collins-hr/shared",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -22,7 +22,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@carrier-hr/eslint-config": "workspace:*",
+    "@collins-hr/eslint-config": "workspace:*",
     "eslint": "^9.13.0",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"

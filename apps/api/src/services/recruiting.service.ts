@@ -6,7 +6,7 @@ import type {
   JobRequisition,
   UpdateCandidateInput,
   UpdateJobInput,
-} from '@carrier-hr/shared';
+} from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { candidates, jobRequisitions } from '../db/schema.js';
 import { NotFound } from '../lib/errors.js';

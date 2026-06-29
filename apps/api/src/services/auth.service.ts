@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import type { AuthUser, LoginInput, Role } from '@carrier-hr/shared';
-import { permissionsForRoles } from '@carrier-hr/shared';
+import type { AuthUser, LoginInput, Role } from '@collins-hr/shared';
+import { permissionsForRoles } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { employees, userRoles, users } from '../db/schema.js';
 import { Unauthorized } from '../lib/errors.js';

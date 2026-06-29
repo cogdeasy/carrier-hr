@@ -1,5 +1,5 @@
 import { and, asc, eq } from 'drizzle-orm';
-import type { OnboardingPlan, OnboardingTaskStatus } from '@carrier-hr/shared';
+import type { OnboardingPlan, OnboardingTaskStatus } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { onboardingTasks } from '../db/schema.js';
 import { Forbidden, NotFound } from '../lib/errors.js';

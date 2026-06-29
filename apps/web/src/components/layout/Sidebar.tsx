@@ -33,7 +33,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                         cn(
                           'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
                           isActive
-                            ? 'bg-carrier-50 text-carrier-800'
+                            ? 'bg-collins-50 text-collins-800'
                             : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
                         )
                       }
@@ -49,7 +49,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
       <div className="border-t border-slate-100 p-4 text-xs text-slate-400">
-        Carrier Global Corporation
+        Collins Aerospace
       </div>
     </aside>
   );

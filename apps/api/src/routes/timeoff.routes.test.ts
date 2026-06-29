@@ -19,13 +19,13 @@ describe('time-off approval workflow', () => {
   beforeAll(async () => {
     ctx = await createTestApp();
     manager = await seedUser(ctx.db, {
-      email: 'mgr@carrier.com',
+      email: 'mgr@collins.com',
       roles: ['manager'],
       firstName: 'Mary',
       lastName: 'Manager',
     });
     employee = await seedUser(ctx.db, {
-      email: 'emp@carrier.com',
+      email: 'emp@collins.com',
       roles: ['employee'],
       firstName: 'Eli',
       lastName: 'Employee',
@@ -47,7 +47,7 @@ describe('time-off approval workflow', () => {
   });
 
   it('lets an employee submit a request, routes it to the manager, and reflects approval in the balance', async () => {
-    const empToken = await login(ctx.app, 'emp@carrier.com');
+    const empToken = await login(ctx.app, 'emp@collins.com');
     const year = new Date().getUTCFullYear();
 
     const created = await ctx.app.inject({
@@ -67,7 +67,7 @@ describe('time-off approval workflow', () => {
     expect(created.json().totalDays).toBeGreaterThan(0);
 
     // Manager sees it in their approvals queue.
-    const mgrToken = await login(ctx.app, 'mgr@carrier.com');
+    const mgrToken = await login(ctx.app, 'mgr@collins.com');
     const approvals = await ctx.app.inject({
       method: 'GET',
       url: '/api/time-off/approvals',
@@ -100,7 +100,7 @@ describe('time-off approval workflow', () => {
   });
 
   it('prevents an employee from approving their own request', async () => {
-    const empToken = await login(ctx.app, 'emp@carrier.com');
+    const empToken = await login(ctx.app, 'emp@collins.com');
     const year = new Date().getUTCFullYear();
     const created = await ctx.app.inject({
       method: 'POST',
@@ -123,7 +123,7 @@ describe('time-off approval workflow', () => {
     // request, so this exercises the self-approval guard in decideRequest
     // rather than the route permission check.
     const year = new Date().getUTCFullYear();
-    const selfMgr = await seedUser(ctx.db, { email: 'selfmgr@carrier.com', roles: ['manager'] });
+    const selfMgr = await seedUser(ctx.db, { email: 'selfmgr@collins.com', roles: ['manager'] });
     await ctx.db
       .update(employees)
       .set({ managerId: selfMgr.employeeId })
@@ -136,7 +136,7 @@ describe('time-off approval workflow', () => {
       usedDays: 0,
       year,
     });
-    const token = await login(ctx.app, 'selfmgr@carrier.com');
+    const token = await login(ctx.app, 'selfmgr@collins.com');
     const created = await ctx.app.inject({
       method: 'POST',
       url: '/api/time-off/requests',

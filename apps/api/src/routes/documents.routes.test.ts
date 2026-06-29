@@ -9,9 +9,9 @@ describe('documents — per-employee signatures', () => {
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    const hr = await seedUser(ctx.db, { email: 'docs.hr@carrier.com', roles: ['hr_admin'] });
-    await seedUser(ctx.db, { email: 'alice@carrier.com', roles: ['employee'] });
-    await seedUser(ctx.db, { email: 'bob@carrier.com', roles: ['employee'] });
+    const hr = await seedUser(ctx.db, { email: 'docs.hr@collins.com', roles: ['hr_admin'] });
+    await seedUser(ctx.db, { email: 'alice@collins.com', roles: ['employee'] });
+    await seedUser(ctx.db, { email: 'bob@collins.com', roles: ['employee'] });
 
     companyDocId = createId('doc');
     await ctx.db.insert(documents).values({
@@ -32,8 +32,8 @@ describe('documents — per-employee signatures', () => {
   });
 
   it('keeps a company-wide document unsigned for others after one employee signs it', async () => {
-    const aliceToken = await login(ctx.app, 'alice@carrier.com');
-    const bobToken = await login(ctx.app, 'bob@carrier.com');
+    const aliceToken = await login(ctx.app, 'alice@collins.com');
+    const bobToken = await login(ctx.app, 'bob@collins.com');
 
     const signed = await ctx.app.inject({
       method: 'POST',
@@ -62,7 +62,7 @@ describe('documents — per-employee signatures', () => {
   });
 
   it('rejects signing a document that does not require a signature', async () => {
-    const hr = await seedUser(ctx.db, { email: 'docs.hr2@carrier.com', roles: ['hr_admin'] });
+    const hr = await seedUser(ctx.db, { email: 'docs.hr2@collins.com', roles: ['hr_admin'] });
     const noSignId = createId('doc');
     await ctx.db.insert(documents).values({
       id: noSignId,
@@ -75,7 +75,7 @@ describe('documents — per-employee signatures', () => {
       requiresSignature: false,
       uploadedById: hr.employeeId,
     });
-    const aliceToken = await login(ctx.app, 'alice@carrier.com');
+    const aliceToken = await login(ctx.app, 'alice@collins.com');
     const res = await ctx.app.inject({
       method: 'POST',
       url: `/api/documents/${noSignId}/sign`,
@@ -86,7 +86,7 @@ describe('documents — per-employee signatures', () => {
   });
 
   it('is idempotent when the same employee signs twice', async () => {
-    const aliceToken = await login(ctx.app, 'alice@carrier.com');
+    const aliceToken = await login(ctx.app, 'alice@collins.com');
     const first = await ctx.app.inject({
       method: 'POST',
       url: `/api/documents/${companyDocId}/sign`,

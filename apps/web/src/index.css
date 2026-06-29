@@ -20,7 +20,7 @@ body {
 
 @layer components {
   .input {
-    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-carrier-500 focus:outline-none focus:ring-2 focus:ring-carrier-500/30 disabled:cursor-not-allowed disabled:bg-slate-100;
+    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-collins-500 focus:outline-none focus:ring-2 focus:ring-collins-500/30 disabled:cursor-not-allowed disabled:bg-slate-100;
   }
 
   .label {

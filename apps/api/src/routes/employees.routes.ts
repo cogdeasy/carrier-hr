@@ -5,7 +5,7 @@ import {
   paginationQuerySchema,
   ROLES,
   updateEmployeeSchema,
-} from '@carrier-hr/shared';
+} from '@collins-hr/shared';
 import { parse } from '../lib/validate.js';
 import {
   createEmployee,

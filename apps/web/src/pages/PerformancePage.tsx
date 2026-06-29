@@ -1,4 +1,4 @@
-import type { CreateGoalInput, Goal, Review } from '@carrier-hr/shared';
+import type { CreateGoalInput, Goal, Review } from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Target } from 'lucide-react';
 import { FormEvent, useState } from 'react';
@@ -81,7 +81,7 @@ export function PerformancePage() {
                     </div>
                     <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100">
                       <div
-                        className="h-full rounded-full bg-carrier-600"
+                        className="h-full rounded-full bg-collins-600"
                         style={{ width: `${goal.progress}%` }}
                       />
                     </div>
@@ -94,7 +94,7 @@ export function PerformancePage() {
                           <button
                             key={p}
                             onClick={() => updateGoal.mutate({ id: goal.id, progress: p })}
-                            className="rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-600 hover:border-carrier-300 hover:text-carrier-700"
+                            className="rounded border border-slate-200 px-2 py-0.5 text-xs text-slate-600 hover:border-collins-300 hover:text-collins-700"
                           >
                             {p}%
                           </button>

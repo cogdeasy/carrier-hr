@@ -1,6 +1,6 @@
-# Carrier HR Platform
+# Collins Aerospace HR Platform
 
-A production-grade HR information system (HRIS) for Carrier Global — a single home
+A production-grade HR information system (HRIS) for Collins Aerospace, an RTX business — a single home
 for people, time off, pay, benefits, performance, hiring and growth.
 
 Built as a TypeScript monorepo with a Fastify + Drizzle API, a React 19 + Vite web
@@ -10,7 +10,7 @@ every route and view across six roles.
 ## Architecture
 
 ```
-carrier-hr/
+collins-hr/
 ├── apps/
 │   ├── api/        Fastify + Drizzle ORM REST API (JWT auth, RBAC, SQLite/Turso)
 │   └── web/        React 19 + Vite + Tailwind SPA (TanStack Query, React Router)
@@ -19,7 +19,7 @@ carrier-hr/
 └── .github/        CI (lint, typecheck, unit/integration tests, build, e2e)
 ```
 
-- **Shared layer** (`@carrier-hr/shared`) is the single source of truth for domain
+- **Shared layer** (`@collins-hr/shared`) is the single source of truth for domain
   types, request/response schemas (Zod) and the RBAC permission matrix. Both the
   API and the web app import from it, so the contract can never drift.
 - **API** is a set of decoupled Fastify route plugins (one per HR module) over a
@@ -49,7 +49,7 @@ Learning & development · Documents & e-signature · Analytics · Notifications.
 pnpm install
 
 # build the shared package (API & web depend on its types)
-pnpm --filter @carrier-hr/shared build
+pnpm --filter @collins-hr/shared build
 
 # create the API env file and a local SQLite database with seed data
 cp apps/api/.env.example apps/api/.env
@@ -66,12 +66,12 @@ After seeding, every account below uses the password `Password123!`:
 
 | Role       | Email                     |
 | ---------- | ------------------------- |
-| HR Admin   | hr.admin@carrier.com      |
-| Manager    | manager@carrier.com       |
-| Employee   | employee@carrier.com      |
-| Recruiter  | recruiter@carrier.com     |
-| Executive  | david.gitlin@carrier.com  |
-| Super admin| admin@carrier.com         |
+| HR Admin   | hr.admin@collins.com      |
+| Manager    | manager@collins.com       |
+| Employee   | employee@collins.com      |
+| Recruiter  | recruiter@collins.com     |
+| Executive  | david.gitlin@collins.com  |
+| Super admin| admin@collins.com         |
 
 ## Scripts
 

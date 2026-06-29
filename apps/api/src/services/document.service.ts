@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
-import type { CreateDocumentInput, HrDocument } from '@carrier-hr/shared';
+import type { CreateDocumentInput, HrDocument } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { documentSignatures, documents } from '../db/schema.js';
 import { BadRequest, Forbidden, NotFound } from '../lib/errors.js';

@@ -1,5 +1,5 @@
 import { inArray } from 'drizzle-orm';
-import type { Role } from '@carrier-hr/shared';
+import type { Role } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import { userRoles, users } from '../db/schema.js';
 

@@ -1,4 +1,4 @@
-import type { OnboardingPlan } from '@carrier-hr/shared';
+import type { OnboardingPlan } from '@collins-hr/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { Badge, statusTone } from '../components/ui/Badge';
@@ -58,11 +58,11 @@ export function OnboardingPage() {
             <span className="font-medium text-slate-700">
               {plan.completedTasks} of {plan.totalTasks} tasks complete
             </span>
-            <span className="font-semibold text-carrier-700">{plan.percentComplete}%</span>
+            <span className="font-semibold text-collins-700">{plan.percentComplete}%</span>
           </div>
           <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-carrier-600 transition-all"
+              className="h-full rounded-full bg-collins-600 transition-all"
               style={{ width: `${plan.percentComplete}%` }}
             />
           </div>
@@ -83,7 +83,7 @@ export function OnboardingPage() {
                         onClick={() =>
                           toggle.mutate({ id: task.id, status: done ? 'pending' : 'completed' })
                         }
-                        className="mt-0.5 text-carrier-600"
+                        className="mt-0.5 text-collins-600"
                         aria-label={done ? 'Mark incomplete' : 'Mark complete'}
                       >
                         {done ? (

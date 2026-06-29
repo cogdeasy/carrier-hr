@@ -1,3 +1,3 @@
-import base from '@carrier-hr/eslint-config/base';
+import base from '@collins-hr/eslint-config/base';
 
 export default base;

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { createTimeOffSchema, decideTimeOffSchema, hasPermission } from '@carrier-hr/shared';
+import { createTimeOffSchema, decideTimeOffSchema, hasPermission } from '@collins-hr/shared';
 import { parse } from '../lib/validate.js';
 import {
   cancelRequest,

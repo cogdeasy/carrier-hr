@@ -611,7 +611,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'Carrier University'"
+          "default": "'Collins Aerospace University'"
         },
         "duration_minutes": {
           "name": "duration_minutes",
@@ -842,7 +842,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'Carrier'"
+          "default": "'Collins Aerospace'"
         },
         "location": {
           "name": "location",

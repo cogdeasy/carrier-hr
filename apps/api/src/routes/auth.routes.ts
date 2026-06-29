@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { changePasswordSchema, loginSchema } from '@carrier-hr/shared';
+import { changePasswordSchema, loginSchema } from '@collins-hr/shared';
 import { parse } from '../lib/validate.js';
 import { authenticate, changePassword, getSessionByUserId } from '../services/auth.service.js';
 

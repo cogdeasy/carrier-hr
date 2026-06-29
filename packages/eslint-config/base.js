@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import globals from 'globals';
 
-/** Shared flat ESLint config for all Carrier HR packages. */
+/** Shared flat ESLint config for all Collins Aerospace HR packages. */
 export default tseslint.config(
   {
     ignores: ['dist', 'build', 'coverage', 'node_modules', 'drizzle', 'playwright-report'],

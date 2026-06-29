@@ -24,7 +24,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'pnpm --filter @carrier-hr/api dev',
+      command: 'pnpm --filter @collins-hr/api dev',
       port: API_PORT,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
@@ -35,7 +35,7 @@ export default defineConfig({
       },
     },
     {
-      command: `pnpm --filter @carrier-hr/web preview --port ${WEB_PORT} --strictPort --host 127.0.0.1`,
+      command: `pnpm --filter @collins-hr/web preview --port ${WEB_PORT} --strictPort --host 127.0.0.1`,
       port: WEB_PORT,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,

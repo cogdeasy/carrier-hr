@@ -1,4 +1,4 @@
-import type { ChangePasswordInput, Employee } from '@carrier-hr/shared';
+import type { ChangePasswordInput, Employee } from '@collins-hr/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { FormEvent, useState } from 'react';
 import { Avatar } from '../components/ui/Avatar';

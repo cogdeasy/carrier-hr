@@ -1,4 +1,4 @@
-import type { AuthUser, Permission } from '@carrier-hr/shared';
+import type { AuthUser, Permission } from '@collins-hr/shared';
 import {
   createContext,
   useCallback,
