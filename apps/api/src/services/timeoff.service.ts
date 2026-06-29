@@ -370,7 +370,7 @@ export async function decideRequest(
           decidedAt: null,
           updatedAt: nowIso(),
         })
-        .where(eq(timeOffRequests.id, requestId));
+        .where(and(eq(timeOffRequests.id, requestId), eq(timeOffRequests.status, status)));
       throw await overdraftError(db, row.employeeId, row.type as TimeOffType, yearOf(row.startDate), row.totalDays);
     }
   }
