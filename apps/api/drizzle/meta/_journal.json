@@ -15,6 +15,13 @@
       "when": 1782738740002,
       "tag": "0001_cheerful_layla_miller",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782759997378,
+      "tag": "0002_peaceful_ricochet",
+      "breakpoints": true
     }
   ]
 }
