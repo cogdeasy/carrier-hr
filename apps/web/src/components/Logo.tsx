@@ -1,38 +1,28 @@
 import { cn } from '../lib/cn';
 
-/** Collins Aerospace wordmark. */
+/**
+ * Collins Aerospace wordmark. The brand is a text-only logotype (no symbol):
+ * "Collins Aerospace" set in a single-weight humanist sans in deep blue.
+ */
 export function Logo({ className, variant = 'dark' }: { className?: string; variant?: 'dark' | 'light' }) {
-  const primary = variant === 'dark' ? '#0033A0' : '#ffffff';
-  const accent = variant === 'dark' ? '#00A3E0' : '#bccdff';
+  const fill = variant === 'dark' ? '#00205B' : '#ffffff';
   return (
     <svg
-      viewBox="0 0 320 80"
-      className={cn('h-9 w-auto', className)}
+      viewBox="0 0 300 40"
+      className={cn('h-8 w-auto', className)}
       role="img"
       aria-label="Collins Aerospace"
     >
-      <path d="M4 40 q34 -30 70 0 q34 30 70 0" fill="none" stroke={accent} strokeWidth="6" strokeLinecap="round" />
       <text
-        x="2"
-        y="58"
-        fontFamily="Inter, system-ui, sans-serif"
-        fontWeight="800"
-        fontSize="34"
-        letterSpacing="-0.5"
-        fill={primary}
+        x="0"
+        y="30"
+        fontFamily="Inter, 'Helvetica Neue', Arial, sans-serif"
+        fontWeight="500"
+        fontSize="32"
+        letterSpacing="0.2"
+        fill={fill}
       >
-        Collins
-      </text>
-      <text
-        x="150"
-        y="58"
-        fontFamily="Inter, system-ui, sans-serif"
-        fontWeight="400"
-        fontSize="34"
-        letterSpacing="3"
-        fill={primary}
-      >
-        Aerospace
+        Collins Aerospace
       </text>
     </svg>
   );
