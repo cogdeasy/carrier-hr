@@ -250,6 +250,9 @@ export async function decideLifeEvent(
     .where(eq(qualifyingLifeEvents.id, id))
     .limit(1);
   if (!existing) throw NotFound('Qualifying life event not found');
+  if (existing.employeeId === deciderId) {
+    throw Forbidden('You cannot review your own qualifying life event');
+  }
   if (existing.status !== 'pending') {
     throw BadRequest('This life event has already been reviewed');
   }

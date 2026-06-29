@@ -422,6 +422,25 @@ describe('benefits enrollment', () => {
     expect(enroll.statusCode).toBe(200);
   });
 
+  it('prevents an HR admin from approving their own life event', async () => {
+    const createRes = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/benefits/life-events',
+      headers: authHeader(hrToken),
+      payload: { type: 'marriage', eventDate: isoDate(-1) },
+    });
+    expect(createRes.statusCode).toBe(201);
+    const event = createRes.json() as QualifyingLifeEvent;
+
+    const selfApprove = await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/benefits/admin/life-events/${event.id}`,
+      headers: authHeader(hrToken),
+      payload: { status: 'approved' },
+    });
+    expect(selfApprove.statusCode).toBe(403);
+  });
+
   it('enforces RBAC on the HR admin enrollment view', async () => {
     await openWindow();
     await ctx.app.inject({
