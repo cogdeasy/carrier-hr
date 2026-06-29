@@ -23,6 +23,7 @@ import {
   timesheets,
 } from '../db/schema.js';
 import { getBalances } from './timeoff.service.js';
+import { BadRequest } from '../lib/errors.js';
 
 function monthKey(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -39,13 +40,18 @@ function round(value: number, decimals = 1): number {
 
 /**
  * Resolve the effective analysis window. Defaults to a trailing 12 calendar
- * months ending today when the caller does not supply explicit bounds.
+ * months ending today when the caller does not supply explicit bounds. Validates
+ * the resolved bounds so a single supplied bound (e.g. a future `from`) that
+ * crosses the default is rejected rather than silently yielding empty data.
  */
 function resolveRange(filters: AnalyticsFilters): { from: string; to: string } {
   const now = new Date();
   const to = filters.to ?? isoDay(now);
   const defaultFrom = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
   const from = filters.from ?? isoDay(defaultFrom);
+  if (from > to) {
+    throw BadRequest('`from` must be on or before `to`', { from, to });
+  }
   return { from, to };
 }
 
@@ -100,11 +106,9 @@ export async function getHrDashboard(
   const population = populationFilter(filters);
   const cat = categoricalScope(filters);
 
-  // Headcount distributions are aggregated in SQL over the filtered population.
-  // The status distribution intentionally ignores a `status` filter so the
-  // breakdown stays meaningful, but still honours the other categorical filters.
-  const statusPopulation = cat.length > 0 ? and(...cat) : undefined;
-
+  // Every distribution and the summary KPIs share the same filtered population
+  // so the numbers reconcile (e.g. the department chart sums to the headcount
+  // card) regardless of which filters are applied.
   const countExpr = sql<number>`count(*)`;
   const [
     byDepartment,
@@ -135,7 +139,7 @@ export async function getHrDashboard(
     db
       .select({ label: employees.status, count: countExpr })
       .from(employees)
-      .where(statusPopulation)
+      .where(population)
       .groupBy(employees.status),
     db
       .select({ label: employees.employmentType, count: countExpr })
@@ -150,7 +154,7 @@ export async function getHrDashboard(
     db
       .select({ status: employees.status, count: countExpr })
       .from(employees)
-      .where(statusPopulation)
+      .where(population)
       .groupBy(employees.status),
     db
       .select({ hireDate: employees.hireDate, status: employees.status })

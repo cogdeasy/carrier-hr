@@ -206,6 +206,16 @@ describe('analytics: org-wide HR dashboard', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('rejects a future-only `from` that crosses the default `to`', async () => {
+    const token = await login(ctx.app, 'hr@collins.com');
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/analytics/hr?from=2999-01-01',
+      headers: authHeader(token),
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it('exports a dataset as CSV', async () => {
     const token = await login(ctx.app, 'hr@collins.com');
     const res = await ctx.app.inject({
