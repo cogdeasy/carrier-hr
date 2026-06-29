@@ -783,7 +783,6 @@ async function seedSupporting(db: Database): Promise<void> {
   }
 
   // Documents (company-wide + personal) and a tracked signature request.
-  const hrAdminId = employees.find((e) => e.email === 'hr.admin@collins.com')!.id;
   const demoEmployeeId = employees.find((e) => e.email === 'employee@collins.com')!.id;
 
   const codeOfConduct = {

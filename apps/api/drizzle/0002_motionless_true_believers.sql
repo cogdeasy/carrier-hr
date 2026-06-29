@@ -1,1 +1,0 @@
-ALTER TABLE `timesheet_entries` ADD `task` text;

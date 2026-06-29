@@ -64,6 +64,7 @@ export const NOTIFICATION_CATEGORY: Record<(typeof NOTIFICATION_TYPES)[number], 
   goal_update: 'Performance',
   document_request: 'Documents',
   onboarding_task: 'Onboarding',
+  learning_assigned: 'Learning',
   announcement: 'Announcements',
 };
 
@@ -75,5 +76,6 @@ export const NOTIFICATION_TYPE_LABELS: Record<(typeof NOTIFICATION_TYPES)[number
   goal_update: 'Goal updates',
   document_request: 'Document requests',
   onboarding_task: 'Onboarding tasks',
+  learning_assigned: 'Learning assignments',
   announcement: 'Announcements',
 };
