@@ -272,14 +272,32 @@ describe('review cycles & enrollment', () => {
       method: 'POST',
       url: '/api/performance/cycles',
       headers: authHeader(hrToken),
-      payload: { name: 'Closeable 2026', startDate: '2026-06-01', endDate: '2026-06-30', status: 'closed' },
+      payload: { name: 'Closeable 2026', startDate: '2026-06-01', endDate: '2026-06-30', status: 'active' },
     });
     const id = created.json().id as string;
+    const closed = await ctx.app.inject({
+      method: 'PATCH',
+      url: `/api/performance/cycles/${id}`,
+      headers: authHeader(hrToken),
+      payload: { status: 'closed' },
+    });
+    expect(closed.statusCode).toBe(200);
     const res = await ctx.app.inject({
       method: 'PATCH',
       url: `/api/performance/cycles/${id}`,
       headers: authHeader(hrToken),
       payload: { status: 'active' },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects creating a cycle in closed status', async () => {
+    const hrToken = await authToken(ctx.app, 'chr@collins.com');
+    const res = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/performance/cycles',
+      headers: authHeader(hrToken),
+      payload: { name: 'Born closed', startDate: '2026-06-01', endDate: '2026-06-30', status: 'closed' },
     });
     expect(res.statusCode).toBe(400);
   });

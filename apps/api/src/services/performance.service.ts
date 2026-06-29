@@ -251,7 +251,7 @@ export async function enrollCycle(
       type: 'review_assigned',
       title: 'Performance review opened',
       body: `You have been enrolled in "${cycle.name}". Complete your self-assessment.`,
-      link: '/performance',
+      link: '/performance?tab=reviews',
     });
     enrolled += 1;
     already.add(c.id);
@@ -340,7 +340,7 @@ export async function submitSelfReview(
     type: 'review_assigned',
     title: 'Self-assessment submitted',
     body: 'A direct report has completed their self-assessment for review.',
-    link: '/performance',
+    link: '/performance?tab=reviews',
   });
   return getReview(db, id);
 }
@@ -375,7 +375,7 @@ export async function submitManagerReview(
     type: 'review_assigned',
     title: 'Performance review completed',
     body: 'Your manager has completed your performance review.',
-    link: '/performance',
+    link: '/performance?tab=reviews',
   });
   return getReview(db, id);
 }
@@ -481,7 +481,7 @@ export async function createOneOnOne(
     type: 'review_assigned',
     title: '1:1 scheduled',
     body: 'Your manager has scheduled a 1:1 with you.',
-    link: '/performance',
+    link: '/performance?tab=oneOnOnes',
   });
   const [hydrated] = await hydrateOneOnOnes(db, [await getMeetingRow(db, id)]);
   return hydrated!;

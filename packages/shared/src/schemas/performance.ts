@@ -66,7 +66,7 @@ export const createReviewCycleSchema = z
     name: z.string().min(1).max(200),
     startDate: dateString,
     endDate: dateString,
-    status: z.enum(REVIEW_CYCLE_STATUSES).optional(),
+    status: z.enum(['upcoming', 'active']).optional(),
   })
   .refine((v) => v.startDate <= v.endDate, {
     message: 'startDate must be on or before endDate',

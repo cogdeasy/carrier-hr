@@ -20,6 +20,7 @@ import {
   Users,
 } from 'lucide-react';
 import { FormEvent, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Badge, statusTone } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -34,9 +35,14 @@ import { formatDate, formatDateTime, titleCase } from '../lib/format';
 
 type Tab = 'goals' | 'reviews' | 'oneOnOnes' | 'cycles';
 
+const TABS: readonly Tab[] = ['goals', 'reviews', 'oneOnOnes', 'cycles'];
+const isTab = (v: string | null): v is Tab => v != null && (TABS as readonly string[]).includes(v);
+
 export function PerformancePage() {
   const { user, can } = useAuth();
-  const [tab, setTab] = useState<Tab>('goals');
+  const [params] = useSearchParams();
+  const initialTab = isTab(params.get('tab')) ? (params.get('tab') as Tab) : 'goals';
+  const [tab, setTab] = useState<Tab>(initialTab);
   const canReviewTeam = can('performance:read:team');
   const isHr = can('performance:admin');
 
@@ -90,6 +96,7 @@ const GOAL_COLUMNS: { status: GoalStatus; label: string }[] = [
   { status: 'active', label: 'Active' },
   { status: 'at_risk', label: 'At risk' },
   { status: 'completed', label: 'Completed' },
+  { status: 'cancelled', label: 'Cancelled' },
 ];
 
 function GoalsTab({ canViewTeam }: { canViewTeam: boolean }) {
@@ -174,7 +181,7 @@ function GoalsTab({ canViewTeam }: { canViewTeam: boolean }) {
           </CardBody>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           {GOAL_COLUMNS.map((col) => {
             const colGoals = goals.filter((g) => g.status === col.status);
             return (
