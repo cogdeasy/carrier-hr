@@ -296,9 +296,11 @@ async function seedSupporting(db: Database): Promise<void> {
 
   // Courses
   const courseIds: { id: string; required: boolean }[] = [];
+  const courseIdByTitle = new Map<string, string>();
   for (const c of COURSES) {
     const id = createId('crs');
     courseIds.push({ id, required: c.required });
+    courseIdByTitle.set(c.title, id);
     await db.insert(t.courses).values({
       id,
       title: c.title,
@@ -309,6 +311,25 @@ async function seedSupporting(db: Database): Promise<void> {
       required: c.required,
     });
   }
+
+  // Course prerequisites (elective learning paths)
+  const PREREQUISITES: [string, string][] = [
+    ['Leadership Essentials', 'Effective Communication'],
+    ['Aerospace Systems Fundamentals', 'Workplace Safety Fundamentals'],
+    ['Lean Six Sigma Yellow Belt', 'Aerospace Systems Fundamentals'],
+  ];
+  for (const [course, prereq] of PREREQUISITES) {
+    const courseId = courseIdByTitle.get(course);
+    const prerequisiteId = courseIdByTitle.get(prereq);
+    if (courseId && prerequisiteId) {
+      await db.insert(t.coursePrerequisites).values({
+        id: createId('cpr'),
+        courseId,
+        prerequisiteId,
+      });
+    }
+  }
+  const hrAdminId = employees.find((e) => e.email === 'hr.admin@collins.com')!.id;
 
   // Time-off balances for everyone
   const balanceMap: Record<string, number> = { vacation: 20, sick: 10, personal: 5 };
@@ -380,18 +401,24 @@ async function seedSupporting(db: Database): Promise<void> {
       });
     }
 
-    // Course enrollments (always enroll in required courses)
+    // Course enrollments (required courses are assigned with a compliance due date)
     for (const c of courseIds) {
       if (c.required || rand() < 0.3) {
         const progress = c.required ? pick([100, 100, 60, 0]) : pick([0, 40, 100]);
         const status = progress >= 100 ? 'completed' : progress > 0 ? 'in_progress' : 'not_started';
+        const completed = status === 'completed';
+        const dueDate = c.required ? pick([daysAgo(randInt(1, 20)), daysAgo(-randInt(10, 45))]) : null;
         await db.insert(t.courseEnrollments).values({
           id: createId('enr'),
           employeeId: e.id,
           courseId: c.id,
           status,
           progress,
-          completedAt: status === 'completed' ? daysAgo(randInt(1, 60)) : null,
+          required: c.required,
+          dueDate,
+          assignedById: c.required ? hrAdminId : null,
+          certificateSerial: completed ? `CAU-${year}-${createId('c').slice(2, 10).toUpperCase()}` : null,
+          completedAt: completed ? daysAgo(randInt(1, 60)) : null,
         });
       }
     }
