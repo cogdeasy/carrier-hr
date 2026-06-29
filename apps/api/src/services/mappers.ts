@@ -21,6 +21,7 @@ import type {
   Timesheet,
   TimesheetEntry,
 } from '@collins-hr/shared';
+import { splitOvertime } from '@collins-hr/shared';
 import type { InferSelectModel } from 'drizzle-orm';
 import type * as schema from '../db/schema.js';
 
@@ -107,22 +108,30 @@ export function toTimeOffRequest(
 export function toTimesheet(
   row: InferSelectModel<typeof schema.timesheets>,
   entries: InferSelectModel<typeof schema.timesheetEntries>[],
+  relations: { employee?: EmployeeRef; approver?: EmployeeRef | null } = {},
 ): Timesheet {
   const mapped: TimesheetEntry[] = entries.map((e) => ({
     id: e.id,
     date: e.date,
     project: e.project,
+    task: e.task,
     hours: e.hours,
     notes: e.notes,
   }));
+  const totalHours = mapped.reduce((sum, e) => sum + e.hours, 0);
+  const { regularHours, overtimeHours } = splitOvertime(totalHours);
   return {
     id: row.id,
     employeeId: row.employeeId,
+    employee: relations.employee,
     weekStarting: row.weekStarting,
     status: row.status as Timesheet['status'],
-    totalHours: mapped.reduce((sum, e) => sum + e.hours, 0),
+    totalHours,
+    regularHours,
+    overtimeHours,
     entries: mapped,
     approverId: row.approverId,
+    approver: relations.approver ?? undefined,
     submittedAt: row.submittedAt,
     decidedAt: row.decidedAt,
     decisionNote: row.decisionNote,
