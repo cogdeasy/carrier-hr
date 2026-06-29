@@ -227,6 +227,39 @@ describe('benefits enrollment', () => {
     expect(enrollment.effectiveDate).toBe(isoDate(-3));
   });
 
+  it('enrolls with a specific older life event when a newer approved event also exists', async () => {
+    const olderQleId = createId('qle');
+    const newerQleId = createId('qle');
+    await ctx.db.insert(qualifyingLifeEvents).values([
+      {
+        id: olderQleId,
+        employeeId: employee.employeeId,
+        type: 'marriage',
+        eventDate: isoDate(-20),
+        status: 'approved',
+        windowEndsAt: isoDate(10),
+      },
+      {
+        id: newerQleId,
+        employeeId: employee.employeeId,
+        type: 'birth',
+        eventDate: isoDate(-2),
+        status: 'approved',
+        windowEndsAt: isoDate(28),
+      },
+    ]);
+    const res = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/benefits/enrollments',
+      headers: authHeader(token),
+      payload: { planId: medicalId, status: 'enrolled', coverageTier: 'employee_only', qleId: olderQleId },
+    });
+    expect(res.statusCode).toBe(200);
+    const enrollment = res.json() as BenefitEnrollment;
+    expect(enrollment.qleId).toBe(olderQleId);
+    expect(enrollment.effectiveDate).toBe(isoDate(-20));
+  });
+
   it('rejects a life event whose special-enrollment window has expired', async () => {
     const qleId = createId('qle');
     await ctx.db.insert(qualifyingLifeEvents).values({

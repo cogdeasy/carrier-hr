@@ -372,7 +372,10 @@ function EnrollmentWizard({
         status,
         coverageTier: status === 'waived' ? 'employee_only' : tier,
         dependentIds: status === 'waived' ? [] : selectedDeps,
-        qleId: eligibility?.activeLifeEvent?.id,
+        qleId:
+          eligibility?.reason === 'qualifying_life_event'
+            ? eligibility.activeLifeEvent?.id
+            : undefined,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['benefits'] });

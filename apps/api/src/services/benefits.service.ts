@@ -360,8 +360,11 @@ export async function enroll(
   const today = isoToday();
 
   if (input.qleId) {
-    const event = await activeLifeEvent(db, employeeId);
-    if (!event || event.id !== input.qleId) {
+    const events = await listLifeEvents(db, { employeeId });
+    const event = events.find(
+      (e) => e.id === input.qleId && e.status === 'approved' && e.windowEndsAt >= today,
+    );
+    if (!event) {
       throw BadRequest('The selected life event is not approved or its enrollment window has closed');
     }
     qleId = event.id;
