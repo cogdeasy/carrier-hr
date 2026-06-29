@@ -56,6 +56,7 @@ function errorMessage(err: unknown): string {
 export function RecruitingPage() {
   const { can } = useAuth();
   const canManage = can('recruiting:write');
+  const canAdmin = can('recruiting:admin');
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
@@ -77,7 +78,14 @@ export function RecruitingPage() {
   });
 
   if (selectedJobId) {
-    return <JobDetail jobId={selectedJobId} onBack={() => setSelectedJobId(null)} canManage={canManage} />;
+    return (
+      <JobDetail
+        jobId={selectedJobId}
+        onBack={() => setSelectedJobId(null)}
+        canManage={canManage}
+        canAdmin={canAdmin}
+      />
+    );
   }
 
   const jobs = jobsQuery.data?.data ?? [];
@@ -313,7 +321,17 @@ function JobFormModal({ job, onClose }: { job?: JobRequisition; onClose: () => v
   );
 }
 
-function JobDetail({ jobId, onBack, canManage }: { jobId: string; onBack: () => void; canManage: boolean }) {
+function JobDetail({
+  jobId,
+  onBack,
+  canManage,
+  canAdmin,
+}: {
+  jobId: string;
+  onBack: () => void;
+  canManage: boolean;
+  canAdmin: boolean;
+}) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [addingCandidate, setAddingCandidate] = useState(false);
@@ -371,7 +389,7 @@ function JobDetail({ jobId, onBack, canManage }: { jobId: string; onBack: () => 
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={statusTone(job.status)}>{titleCase(job.status)}</Badge>
-            {canManage && job.status === 'draft' ? (
+            {canAdmin && job.status === 'draft' ? (
               <Button size="sm" loading={approve.isPending} onClick={() => { setActionError(null); approve.mutate(); }}>
                 Approve & post
               </Button>
@@ -393,7 +411,7 @@ function JobDetail({ jobId, onBack, canManage }: { jobId: string; onBack: () => 
                 Edit
               </Button>
             ) : null}
-            {canManage && (job.status === 'open' || job.status === 'on_hold' || job.status === 'draft') ? (
+            {canManage && (job.status === 'open' || job.status === 'on_hold') ? (
               <Button size="sm" variant="secondary" leftIcon={<Plus className="h-4 w-4" />} onClick={() => setAddingCandidate(true)}>
                 Add candidate
               </Button>
