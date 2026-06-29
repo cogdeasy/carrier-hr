@@ -28,6 +28,7 @@ import {
   fetchPreferences,
   groupByDate,
   notificationKeys,
+  useUnreadCount,
 } from '../lib/notifications';
 
 const PAGE_SIZE = 15;
@@ -72,10 +73,12 @@ export function NotificationsPage() {
     onSuccess: invalidate,
   });
 
+  const { data: unread } = useUnreadCount();
+
   const list: NotificationList | undefined = data;
   const notifications = list?.data ?? [];
   const groups = groupByDate(notifications);
-  const hasUnread = notifications.some((n) => !n.read);
+  const hasUnread = (unread?.count ?? 0) > 0;
 
   const open = (n: Notification) => {
     if (!n.read) markRead.mutate(n.id);
