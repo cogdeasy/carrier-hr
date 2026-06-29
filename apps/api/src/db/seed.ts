@@ -1,4 +1,4 @@
-import type { Role } from '@collins-hr/shared';
+import { COVERAGE_TIERS, type CoverageTier, type Role } from '@collins-hr/shared';
 import { getEnv } from '../env.js';
 import { hashPassword } from '../auth/password.js';
 import { businessDaysBetween } from '../lib/dates.js';
@@ -286,13 +286,47 @@ async function seedSupporting(db: Database): Promise<void> {
     await db.insert(t.companyHolidays).values({ id: createId('hol'), name: h.name, date: h.date, region: 'US' });
   }
 
-  // Benefit plans
+  // Benefit plans + per-tier pricing
+  const TIER_MULTIPLIER: Record<CoverageTier, number> = {
+    employee_only: 1,
+    employee_spouse: 2,
+    employee_children: 1.85,
+    family: 2.8,
+  };
+  const MULTI_TIER_TYPES = new Set(['medical', 'dental', 'vision']);
   const planIds: string[] = [];
   for (const p of BENEFIT_PLANS) {
     const id = createId('plan');
     planIds.push(id);
     await db.insert(t.benefitPlans).values({ id, planYear: year, ...p });
+    const tiers = MULTI_TIER_TYPES.has(p.type)
+      ? COVERAGE_TIERS
+      : (['employee_only'] as const);
+    for (const tier of tiers) {
+      await db.insert(t.benefitPlanTiers).values({
+        id: createId('tier'),
+        planId: id,
+        tier,
+        monthlyPremiumCents: Math.round(p.monthlyPremiumCents * TIER_MULTIPLIER[tier]),
+        employerContributionCents: Math.round(
+          p.employerContributionCents * TIER_MULTIPLIER[tier],
+        ),
+      });
+    }
   }
+
+  // Annual open-enrollment window (currently open for the demo).
+  const windowStart = new Date();
+  windowStart.setUTCDate(windowStart.getUTCDate() - 21);
+  const windowEnd = new Date();
+  windowEnd.setUTCDate(windowEnd.getUTCDate() + 21);
+  await db.insert(t.enrollmentPeriods).values({
+    id: createId('oep'),
+    name: `${year} Annual Open Enrollment`,
+    planYear: year,
+    startsAt: windowStart.toISOString(),
+    endsAt: windowEnd.toISOString(),
+  });
 
   // Courses
   const courseIds: { id: string; required: boolean }[] = [];
@@ -375,8 +409,11 @@ async function seedSupporting(db: Database): Promise<void> {
         employeeId: e.id,
         planId: pick(planIds),
         status: 'enrolled',
+        coverageTier: 'employee_only',
+        effectiveDate: `${year}-01-01`,
         electedAt: new Date().toISOString(),
-        dependents: randInt(0, 3),
+        dependents: 0,
+        dependentIds: '[]',
       });
     }
 
@@ -539,6 +576,42 @@ async function seedSupporting(db: Database): Promise<void> {
   // Notifications for the demo employee + manager
   const emp = employees.find((e) => e.email === 'employee@collins.com')!;
   const mgr = employees.find((e) => e.email === 'manager@collins.com')!;
+  const hr = employees.find((e) => e.email === 'hr.admin@collins.com')!;
+
+  // Dependents + an approved qualifying life event for the demo employee.
+  await db.insert(t.benefitDependents).values([
+    {
+      id: createId('dep'),
+      employeeId: emp.id,
+      firstName: 'Jordan',
+      lastName: 'Doe',
+      relationship: 'spouse',
+      dateOfBirth: '1989-04-12',
+    },
+    {
+      id: createId('dep'),
+      employeeId: emp.id,
+      firstName: 'Avery',
+      lastName: 'Doe',
+      relationship: 'child',
+      dateOfBirth: '2016-09-30',
+    },
+  ]);
+  const qleEvent = new Date();
+  qleEvent.setUTCDate(qleEvent.getUTCDate() - 5);
+  const qleWindow = new Date(qleEvent);
+  qleWindow.setUTCDate(qleWindow.getUTCDate() + 30);
+  await db.insert(t.qualifyingLifeEvents).values({
+    id: createId('qle'),
+    employeeId: emp.id,
+    type: 'marriage',
+    eventDate: isoDate(qleEvent),
+    status: 'approved',
+    windowEndsAt: isoDate(qleWindow),
+    note: 'Recently married — adding spouse to coverage.',
+    decidedById: hr.id,
+    decidedAt: new Date().toISOString(),
+  });
   await db.insert(t.notifications).values({
     id: createId('ntf'),
     employeeId: emp.id,

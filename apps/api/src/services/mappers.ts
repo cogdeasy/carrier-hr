@@ -1,6 +1,10 @@
 import type {
   Address,
   BenefitEnrollment,
+  BenefitPlan,
+  BenefitPlanTier,
+  CoverageState,
+  CoverageTier,
   Candidate,
   Course,
   CourseEnrollment,
@@ -149,16 +153,47 @@ export function toPayslip(row: InferSelectModel<typeof schema.payslips>): Paysli
   };
 }
 
+export function deriveCoverageState(
+  status: BenefitEnrollment['status'],
+  effectiveDate: string | null,
+  endDate: string | null,
+  today: string,
+): CoverageState {
+  if (status === 'waived') return 'waived';
+  if (endDate && endDate <= today) return 'ended';
+  if (effectiveDate && effectiveDate > today) return 'pending';
+  return 'current';
+}
+
 export function toBenefitEnrollment(
   row: InferSelectModel<typeof schema.benefitEnrollments>,
+  relations?: { plan?: BenefitPlan; tier?: BenefitPlanTier | null; today?: string },
 ): BenefitEnrollment {
+  const status = row.status as BenefitEnrollment['status'];
+  const today = relations?.today ?? new Date().toISOString().slice(0, 10);
+  const tier = relations?.tier ?? null;
+  const monthlyPremiumCents = tier?.monthlyPremiumCents ?? relations?.plan?.monthlyPremiumCents ?? 0;
+  const employerContributionCents =
+    tier?.employerContributionCents ?? relations?.plan?.employerContributionCents ?? 0;
+  const employeeCostCents =
+    status === 'waived' ? 0 : Math.max(0, monthlyPremiumCents - employerContributionCents);
   return {
     id: row.id,
     employeeId: row.employeeId,
     planId: row.planId,
-    status: row.status as BenefitEnrollment['status'],
+    plan: relations?.plan,
+    status,
+    coverageTier: row.coverageTier as CoverageTier,
+    coverageState: deriveCoverageState(status, row.effectiveDate, row.endDate, today),
+    effectiveDate: row.effectiveDate,
+    endDate: row.endDate,
+    qleId: row.qleId,
     electedAt: row.electedAt,
     dependents: row.dependents,
+    dependentIds: parseJson<string[]>(row.dependentIds) ?? [],
+    monthlyPremiumCents,
+    employerContributionCents,
+    employeeCostCents,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
