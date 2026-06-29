@@ -931,14 +931,43 @@ export const notificationPreferences = sqliteTable(
   }),
 );
 
-export const auditLogs = sqliteTable('audit_logs', {
+export const auditLogs = sqliteTable(
+  'audit_logs',
+  {
+    id: text('id').primaryKey(),
+    actorId: text('actor_id'),
+    action: text('action').notNull(),
+    entity: text('entity').notNull(),
+    entityId: text('entity_id'),
+    metadata: text('metadata'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  },
+  (t) => ({
+    actionIdx: index('audit_logs_action_idx').on(t.action),
+    entityIdx: index('audit_logs_entity_idx').on(t.entity),
+    createdIdx: index('audit_logs_created_idx').on(t.createdAt),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Organization settings (singleton company profile)
+// ---------------------------------------------------------------------------
+
+export const orgSettings = sqliteTable('org_settings', {
   id: text('id').primaryKey(),
-  actorId: text('actor_id'),
-  action: text('action').notNull(),
-  entity: text('entity').notNull(),
-  entityId: text('entity_id'),
-  metadata: text('metadata'),
-  createdAt: text('created_at')
-    .notNull()
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`),
+  legalName: text('legal_name').notNull().default('Collins Aerospace'),
+  displayName: text('display_name').notNull().default('Collins Aerospace'),
+  parentCompany: text('parent_company').notNull().default('RTX'),
+  headquarters: text('headquarters').notNull().default('Charlotte, NC'),
+  supportEmail: text('support_email').notNull().default('hr@collins.com'),
+  phone: text('phone'),
+  website: text('website').notNull().default('https://www.collinsaerospace.com'),
+  timezone: text('timezone').notNull().default('America/New_York'),
+  fiscalYearStartMonth: integer('fiscal_year_start_month').notNull().default(1),
+  divisions: text('divisions').notNull().default('[]'),
+  locations: text('locations').notNull().default('[]'),
+  departments: text('departments').notNull().default('[]'),
+  ...timestamps,
 });

@@ -15,6 +15,7 @@ import { PayrollPage } from './pages/PayrollPage';
 import { PerformancePage } from './pages/PerformancePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RecruitingPage } from './pages/RecruitingPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { TimesheetsPage } from './pages/TimesheetsPage';
 import { EmployeeDetailPage } from './pages/directory/EmployeeDetailPage';
 import { DirectoryPage } from './pages/directory/DirectoryPage';
@@ -47,6 +48,7 @@ export function App() {
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

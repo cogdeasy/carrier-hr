@@ -8,6 +8,7 @@ import {
   GraduationCap,
   HeartPulse,
   LayoutDashboard,
+  Settings,
   Target,
   Users,
   Wallet,
@@ -73,5 +74,9 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Documents', to: '/documents', icon: FileText },
       { label: 'Analytics', to: '/analytics', icon: BarChart3, permission: 'analytics:read' },
     ],
+  },
+  {
+    heading: 'Administration',
+    items: [{ label: 'Settings', to: '/settings', icon: Settings, permission: 'settings:admin' }],
   },
 ];
