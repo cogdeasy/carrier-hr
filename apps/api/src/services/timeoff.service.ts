@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import type {
   CompanyHoliday,
   CreateTimeOffInput,
@@ -7,7 +7,7 @@ import type {
   TimeOffRequest,
   TimeOffType,
 } from '@collins-hr/shared';
-import { TIME_OFF_TYPES } from '@collins-hr/shared';
+import { TIME_OFF_TYPES, isAccrualTimeOffType } from '@collins-hr/shared';
 import type { Database } from '../db/client.js';
 import {
   companyHolidays,
@@ -115,7 +115,10 @@ export async function createRequest(
   const totalDays = businessDaysBetween(input.startDate, input.endDate);
   if (totalDays <= 0) throw BadRequest('Selected range contains no working days');
 
-  if (input.type !== 'unpaid') {
+  // Only accrual leave (vacation/sick/personal) draws down a balance. Other
+  // types (bereavement, jury_duty, parental, unpaid) are granted without a
+  // balance check, so they must not be gated on a (non-existent) accrual.
+  if (isAccrualTimeOffType(input.type)) {
     const balances = await getBalances(db, employeeId, yearOf(input.startDate));
     const balance = balances.find((b) => b.type === input.type);
     if (balance && totalDays > balance.availableDays) {
@@ -197,7 +200,7 @@ export async function decideRequest(
     })
     .where(eq(timeOffRequests.id, requestId));
 
-  if (status === 'approved' && row.type !== 'unpaid') {
+  if (status === 'approved' && isAccrualTimeOffType(row.type)) {
     await adjustUsedDays(db, row.employeeId, row.type as TimeOffType, yearOf(row.startDate), row.totalDays);
   }
 
@@ -263,9 +266,11 @@ async function adjustUsedDays(
     )
     .limit(1);
   if (existing) {
+    // Atomic increment so concurrent approvals can't clobber each other's
+    // update (the read-then-write race window on libSQL/Turso).
     await db
       .update(timeOffBalances)
-      .set({ usedDays: existing.usedDays + days })
+      .set({ usedDays: sql`${timeOffBalances.usedDays} + ${days}` })
       .where(eq(timeOffBalances.id, existing.id));
   } else {
     await db.insert(timeOffBalances).values({

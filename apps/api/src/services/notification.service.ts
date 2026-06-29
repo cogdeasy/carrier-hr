@@ -50,7 +50,12 @@ export async function markRead(db: Database, employeeId: string, id: string): Pr
     .where(and(eq(notifications.id, id), eq(notifications.employeeId, employeeId)))
     .limit(1);
   if (!row) throw NotFound('Notification not found');
-  await db.update(notifications).set({ read: true }).where(eq(notifications.id, id));
+  // Scope the write by owner as well as id so the update can never touch
+  // another employee's notification, even if ownership shifted after the read.
+  await db
+    .update(notifications)
+    .set({ read: true })
+    .where(and(eq(notifications.id, id), eq(notifications.employeeId, employeeId)));
 }
 
 export async function markAllRead(db: Database, employeeId: string): Promise<void> {

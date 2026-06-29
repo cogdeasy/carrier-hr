@@ -70,7 +70,7 @@ After seeding, every account below uses the password `Password123!`:
 | Manager    | manager@collins.com       |
 | Employee   | employee@collins.com      |
 | Recruiter  | recruiter@collins.com     |
-| Executive  | david.gitlin@collins.com  |
+| Executive  | troy.brunk@collins.com  |
 | Super admin| admin@collins.com         |
 
 ## Scripts

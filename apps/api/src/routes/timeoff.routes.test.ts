@@ -99,6 +99,27 @@ describe('time-off approval workflow', () => {
     expect(balance!.usedDays).toBeGreaterThan(0);
   });
 
+  it('accepts non-accrual leave (bereavement) without a seeded balance', async () => {
+    // Regression: bereavement/jury_duty/parental have no accrual balance, so
+    // they must not be rejected for "insufficient balance".
+    const empToken = await login(ctx.app, 'emp@collins.com');
+    const year = new Date().getUTCFullYear();
+    const created = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/time-off/requests',
+      headers: authHeader(empToken),
+      payload: {
+        type: 'bereavement',
+        startDate: `${year}-11-02`,
+        endDate: `${year}-11-04`,
+        reason: 'Family bereavement',
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json().status).toBe('pending');
+    expect(created.json().type).toBe('bereavement');
+  });
+
   it('prevents an employee from approving their own request', async () => {
     const empToken = await login(ctx.app, 'emp@collins.com');
     const year = new Date().getUTCFullYear();

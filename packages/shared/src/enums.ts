@@ -17,6 +17,14 @@ export const TIME_OFF_TYPES = [
 ] as const;
 export type TimeOffType = (typeof TIME_OFF_TYPES)[number];
 
+// Leave types that draw down an accrued balance. All other types
+// (bereavement, jury_duty, parental, unpaid) are granted without a balance
+// check and do not decrement an accrual.
+export const ACCRUAL_TIME_OFF_TYPES = ['vacation', 'sick', 'personal'] as const;
+export function isAccrualTimeOffType(type: string): type is (typeof ACCRUAL_TIME_OFF_TYPES)[number] {
+  return (ACCRUAL_TIME_OFF_TYPES as readonly string[]).includes(type);
+}
+
 export const REQUEST_STATUSES = ['pending', 'approved', 'rejected', 'cancelled'] as const;
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 
