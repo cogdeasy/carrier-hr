@@ -345,6 +345,26 @@ describe('benefits enrollment', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('allows deleting a dependent referenced only by an ended election', async () => {
+    const dep = await addDependent(token);
+    await ctx.db.insert(benefitEnrollments).values({
+      id: createId('enr'),
+      employeeId: employee.employeeId,
+      planId: medicalId,
+      status: 'enrolled',
+      coverageTier: 'family',
+      effectiveDate: isoDate(-400),
+      endDate: isoDate(-30),
+      dependentIds: JSON.stringify([dep.id]),
+    });
+    const res = await ctx.app.inject({
+      method: 'DELETE',
+      url: `/api/benefits/dependents/${dep.id}`,
+      headers: authHeader(token),
+    });
+    expect(res.statusCode).toBe(204);
+  });
+
   it('summarises cost per paycheck across enrolled plans', async () => {
     await openWindow();
     for (const planId of [medicalId, dentalId]) {

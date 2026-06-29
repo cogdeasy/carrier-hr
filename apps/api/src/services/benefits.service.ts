@@ -33,7 +33,7 @@ import {
 import { BadRequest, Forbidden, NotFound } from '../lib/errors.js';
 import { isoToday, nowIso } from '../lib/dates.js';
 import { createId } from '../lib/ids.js';
-import { toBenefitEnrollment } from './mappers.js';
+import { deriveCoverageState, toBenefitEnrollment } from './mappers.js';
 
 // ---------------------------------------------------------------------------
 // Plans
@@ -164,11 +164,22 @@ export async function updateDependent(
 
 export async function deleteDependent(db: Database, employeeId: string, id: string): Promise<void> {
   await getOwnDependent(db, employeeId, id);
+  const today = isoToday();
   const covering = await db
-    .select({ id: benefitEnrollments.id, dependentIds: benefitEnrollments.dependentIds })
+    .select({
+      status: benefitEnrollments.status,
+      effectiveDate: benefitEnrollments.effectiveDate,
+      endDate: benefitEnrollments.endDate,
+      dependentIds: benefitEnrollments.dependentIds,
+    })
     .from(benefitEnrollments)
     .where(eq(benefitEnrollments.employeeId, employeeId));
-  if (covering.some((e) => (JSON.parse(e.dependentIds) as string[]).includes(id))) {
+  const blockedByActive = covering.some((e) => {
+    if (!(JSON.parse(e.dependentIds) as string[]).includes(id)) return false;
+    const state = deriveCoverageState(e.status, e.effectiveDate, e.endDate, today);
+    return state === 'current' || state === 'pending';
+  });
+  if (blockedByActive) {
     throw BadRequest('Remove this dependent from your active elections before deleting them');
   }
   await db.delete(benefitDependents).where(eq(benefitDependents.id, id));
